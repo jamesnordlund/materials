@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "materials": {
+      "command": "python",
+      "args": ["-m", "mcp_materials.server"],
+      "cwd": "D:\\Hesham\\mcp-materials-server",
+      "env": {
+        "MP_API_KEY": "YOUR_MATERIALS_PROJECT_API_KEY"
+      }
+    }
+  }
+}
