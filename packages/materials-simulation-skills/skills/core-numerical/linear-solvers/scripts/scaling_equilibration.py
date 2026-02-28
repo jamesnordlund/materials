@@ -3,54 +3,100 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
+import scipy.sparse
 
 
-def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
-    _, ext = os.path.splitext(path)
-    if ext == ".npy":
-        return np.load(path)
-    return np.loadtxt(path, delimiter=delimiter)
+# Enable import of shared utilities from skills/_shared/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+from _shared._matrix_io import load_matrix  # noqa: E402
 
 
 def compute_scaling(
-    matrix: np.ndarray,
+    matrix: Union[np.ndarray, scipy.sparse.spmatrix],
     symmetry_tol: float,
     symmetric: bool,
 ) -> Dict[str, object]:
+    """Compute row/column scaling factors for matrix equilibration.
+
+    Supports both dense numpy arrays and sparse scipy matrices.
+    For sparse matrices, uses sparse operations for efficient computation.
+
+    Args:
+        matrix: Input matrix (dense or sparse)
+        symmetry_tol: Tolerance for symmetry check
+        symmetric: Whether to compute symmetric scaling
+
+    Returns:
+        Dictionary with scaling factors and diagnostics
+    """
+    is_sparse = scipy.sparse.issparse(matrix)
+
+    # Check dimensions
     if matrix.ndim != 2:
         raise ValueError("matrix must be 2D")
-    if not np.all(np.isfinite(matrix)):
-        raise ValueError("matrix contains non-finite values")
 
     m, n = matrix.shape
     if symmetric and m != n:
         raise ValueError("symmetric scaling requires a square matrix")
 
-    abs_matrix = np.abs(matrix)
-    row_max = np.max(abs_matrix, axis=1)
-    col_max = np.max(abs_matrix, axis=0)
+    # Compute row and column norms using sparse operations when applicable
+    if is_sparse:
+        # Check finiteness for sparse matrices using the .data array
+        if not np.all(np.isfinite(matrix.data)):
+            raise ValueError("matrix contains non-finite values")
+        # For sparse matrices, use abs() to create absolute value matrix
+        abs_matrix = abs(matrix)
+        # max() on sparse matrix returns a sparse matrix, convert to dense array
+        row_max_sparse = abs_matrix.max(axis=1)
+        col_max_sparse = abs_matrix.max(axis=0)
+        # toarray() converts sparse to dense, then flatten to 1D
+        row_max = np.asarray(row_max_sparse.toarray()).flatten()
+        col_max = np.asarray(col_max_sparse.toarray()).flatten()
+    else:
+        # Dense case (original behavior)
+        if not np.all(np.isfinite(matrix)):
+            raise ValueError("matrix contains non-finite values")
+        abs_matrix = np.abs(matrix)
+        row_max = np.max(abs_matrix, axis=1)
+        col_max = np.max(abs_matrix, axis=0)
 
-    zero_rows = [int(i) for i, v in enumerate(row_max) if v == 0]
-    zero_cols = [int(i) for i, v in enumerate(col_max) if v == 0]
+    zero_rows = [int(i) for i in range(len(row_max)) if row_max[i] == 0]
+    zero_cols = [int(i) for i in range(len(col_max)) if col_max[i] == 0]
 
     row_scale = [1.0 / v if v > 0 else 1.0 for v in row_max]
     col_scale = [1.0 / v if v > 0 else 1.0 for v in col_max]
 
     symmetric_scale = None
-    is_symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
+
+    # Symmetry check - for sparse, convert to dense only for check (or skip for very large)
+    if is_sparse and matrix.shape[0] > 10000:
+        # Skip symmetry check for large sparse matrices
+        is_symmetric = None
+    elif is_sparse:
+        # Convert to dense for symmetry check (small matrices only)
+        is_symmetric = bool(
+            np.allclose(matrix.toarray(), matrix.T.toarray(), atol=symmetry_tol, rtol=0.0)
+        )
+    else:
+        is_symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
+
     if symmetric:
         symmetric_scale = [1.0 / np.sqrt(v) if v > 0 else 1.0 for v in row_max]
 
     notes: List[str] = []
+    if is_sparse:
+        notes.append(f"Sparse matrix detected (nnz={matrix.nnz}, density={matrix.nnz/(m*n):.4g}).")
     if zero_rows:
         notes.append("Zero rows detected; scaling set to 1 for those rows.")
     if zero_cols:
         notes.append("Zero cols detected; scaling set to 1 for those cols.")
-    if symmetric and not is_symmetric:
+    if symmetric and is_symmetric is not None and not is_symmetric:
         notes.append("Matrix is not symmetric within tolerance; check inputs.")
+    elif symmetric and is_symmetric is None:
+        notes.append("Symmetry check skipped for large sparse matrix.")
 
     return {
         "shape": [m, n],
@@ -64,6 +110,7 @@ def compute_scaling(
         "zero_cols": zero_cols,
         "symmetric_scale": symmetric_scale,
         "symmetric": is_symmetric,
+        "is_sparse": is_sparse,
         "notes": notes,
     }
 

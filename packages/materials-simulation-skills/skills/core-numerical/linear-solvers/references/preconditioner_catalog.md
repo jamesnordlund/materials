@@ -46,10 +46,17 @@ For SPD matrices: A ≈ LLᵀ where L is sparse.
 - More robust, higher cost
 - k = 1 or 2 often sufficient
 
-**Modified IC (MIC)**:
-- Add dropped entries to diagonal
-- Better for M-matrices (e.g., Laplacian)
-- Preserves row sums
+**Modified IC (MIC) and Diagonal Shift**:
+- Add dropped fill entries back to diagonal (row sum preservation)
+- Better for M-matrices (e.g., Laplacian) and matrices that are nearly singular
+- **When IC(0) fails**: If IC(0) breaks down (zero or negative pivot), add diagonal shift:
+  ```
+  M = L L^T + δD  where D = diag(A)
+  ```
+  - Start with δ = 1e-3 × ||A||_F
+  - Increase δ if breakdown persists
+  - This is called "Modified IC with Compensation" or "IC with Diagonal Shift"
+- **MATLAB equivalent**: `ichol(A, struct('droptol', 0, 'diagcomp', 1e-3))`
 
 ### Incomplete LU (ILU)
 
@@ -177,13 +184,17 @@ Parameter ω (relaxation): typically 1.0
 
 ### SSOR (Symmetric SOR)
 
-For SPD systems:
+For SPD systems, the SSOR preconditioner is (Saad 2003, Eq. 10.7):
 ```
-M = (D/ω + L) × (D/ω)⁻¹ × (D/ω + U)
+M = (ω/(2-ω)) × (D/ω + L) × D⁻¹ × (D/ω + U)
 ω: overrelaxation parameter (0 < ω < 2)
 ω = 1: Symmetric Gauss-Seidel
 ω optimal ≈ 2/(1 + sin(πh)) for model problem
+
+where D = diag(A), L = strict lower triangle, U = strict upper triangle
 ```
+
+**Reference:** Saad, Y. (2003). *Iterative Methods for Sparse Linear Systems*, 2nd ed., SIAM, Eq. 10.7.
 
 ### Polynomial Preconditioners
 
@@ -242,6 +253,214 @@ For multi-physics with fields u₁, u₂, ...:
 Multiplicative: Solve u₁, then u₂ using updated u₁
 Additive: Solve each independently, sum corrections
 ```
+
+## Domain Decomposition Preconditioners
+
+Domain decomposition (DD) methods partition the computational domain into subdomains and construct preconditioners by combining local subdomain solves with interface coupling. These methods are particularly effective for parallel computing and large-scale problems.
+
+**References:**
+- Toselli, A. & Widlund, O. (2005). *Domain Decomposition Methods - Algorithms and Theory*, Springer Series in Computational Mathematics, Vol. 34.
+- Smith, B., Bjørstad, P., & Gropp, W. (1996). *Domain Decomposition: Parallel Multilevel Methods for Elliptic Partial Differential Equations*, Cambridge University Press.
+
+### Schwarz Methods
+
+Domain decomposition preconditioners based on overlapping subdomain decompositions.
+
+#### Additive Schwarz Method (ASM)
+
+Solve independently on overlapping subdomains and sum corrections.
+
+**Algorithm:**
+```
+Given: Domain Ω decomposed into N overlapping subdomains Ωᵢ
+For each subdomain i:
+  Solve Aᵢuᵢ = fᵢ locally on Ωᵢ
+Combine: u = Σᵢ Rᵢᵀuᵢ
+```
+
+Where Rᵢ is a restriction operator to subdomain i.
+
+**Key Parameters:**
+- **Overlap δ**: Number of layers of elements/nodes shared between subdomains
+  - δ = 0: No overlap, domain decomposition only at interfaces
+  - δ = 1-3: Typical practical values
+  - Larger δ: Better convergence, higher communication cost
+
+**Characteristics:**
+- Embarrassingly parallel (independent subdomain solves)
+- Convergence rate independent of number of subdomains with sufficient overlap
+- Iteration count increases as number of subdomains increases (needs coarse grid)
+
+**When to Use:**
+- Distributed memory parallel systems
+- Problems with natural domain partitioning
+- Combined with coarse grid correction for scalability
+
+**Typical Convergence:**
+```
+With overlap δ = 1: iteration count ∝ O(N^(1/2)) subdomains without coarse grid
+With coarse grid: iteration count ≈ constant as N increases
+```
+
+#### Multiplicative Schwarz Method (MSM)
+
+Solve sequentially on overlapping subdomains, each using updated solution.
+
+**Algorithm:**
+```
+For i = 1 to N:
+  Solve Aᵢuᵢ = fᵢ on Ωᵢ using current iterate
+  Update global solution u with uᵢ
+```
+
+**Advantages over Additive:**
+- Stronger preconditioner (more information propagation)
+- Typically requires fewer iterations
+- Can use smaller overlap for same convergence
+
+**Disadvantages:**
+- Sequential dependency (less parallel)
+- Harder to implement efficiently on distributed systems
+- May require careful subdomain ordering
+
+**When to Use:**
+- Shared-memory parallel systems (OpenMP)
+- Strong coupling between subdomains
+- When iteration count is the bottleneck
+- As smoother in multilevel methods
+
+### Balancing Domain Decomposition by Constraints (BDDC)
+
+Non-overlapping DD method with carefully chosen coarse degrees of freedom.
+
+**Core Idea:**
+```
+Decompose unknowns into:
+  - Interior: Fully within one subdomain
+  - Interface: Shared between subdomains
+  - Primal: Coarse dofs enforcing continuity constraints
+
+Primal variables form coarse problem for global coupling.
+```
+
+**Constraint Selection:**
+- **Vertex constraints**: Values at subdomain corners
+- **Edge/Face averages**: For higher-order elements or 3D
+- **Rigid body modes**: For elasticity problems
+
+**Characteristics:**
+- One-level preconditioner (no recursive coarsening)
+- Scalable: condition number bound independent of subdomain count
+- κ(M⁻¹A) ≤ C(1 + log(H/h))² where H = subdomain size, h = element size
+- Excellent for structured grids and elasticity
+
+**When to Use:**
+- Structural mechanics and elasticity
+- Moderate to large scale (10³-10⁶ subdomains)
+- When subdomain problems can be factored once
+- Prefer spectral bounds over iteration count
+
+**Implementation Notes:**
+- Requires local dense Schur complements on interfaces
+- Setup cost higher than Schwarz methods
+- Apply cost dominated by local subdomain solves
+
+**Typical Performance:**
+```
+Elasticity: 20-40 iterations independent of subdomain count
+Laplace: 10-30 iterations with log²(H/h) dependence
+```
+
+### Finite Element Tearing and Interconnecting (FETI)
+
+Non-overlapping DD using Lagrange multipliers to enforce interface compatibility.
+
+**Core Idea:**
+```
+"Tear" domain at subdomain interfaces
+Apply Dirichlet conditions on each subdomain
+Enforce continuity via Lagrange multipliers λ
+
+Solve dual problem for λ, then recover primal unknowns u
+```
+
+**Variants:**
+- **FETI-1**: Original method, one Lagrange multiplier per interface dof
+- **FETI-DP** (Dual-Primal): Combines FETI with primal coarse space (like BDDC)
+- **FETI-2**: Two multipliers per interface (more general)
+
+**Characteristics:**
+- Solves dual problem (smaller than primal for many subdomains)
+- Each subdomain solve is independent with Dirichlet BC
+- Requires handling "floating" subdomains (no boundary conditions)
+- Coarse problem: subdomain rigid body modes or corner constraints
+
+**When to Use:**
+- Large number of subdomains (10³-10⁶)
+- Structural mechanics (elasticity, contact, fracture)
+- Problems with varying material properties across subdomains
+- When dual problem is significantly smaller than primal
+
+**Advantages:**
+- Natural for problems with local Neumann BC or contact
+- Handles heterogeneous coefficients well
+- Robust for nearly incompressible materials
+
+**Disadvantages:**
+- More complex implementation than Schwarz
+- Requires careful handling of null spaces (floating subdomains)
+- Setup cost for coarse problem
+
+**Typical Performance:**
+```
+FETI-DP for elasticity: 15-50 iterations, weakly dependent on subdomain count
+Convergence bound: κ(F⁻¹S) ≤ C(1 + log(H/h))²
+```
+
+### Domain Decomposition Selection Guide
+
+| Method | Best For | Parallel Efficiency | Setup Cost | Iteration Count |
+|--------|----------|-------------------|------------|-----------------|
+| Additive Schwarz | Shared-memory, moderate scale | High | Low | Moderate (needs coarse grid) |
+| Multiplicative Schwarz | Strong coupling, smoother | Low | Low | Low |
+| BDDC | Elasticity, structured grids | High | Moderate | Low |
+| FETI/FETI-DP | Large scale, heterogeneous | High | Moderate | Low |
+
+### Combining DD with Local Preconditioners
+
+Domain decomposition typically uses a local preconditioner for each subdomain:
+
+| Local Precond. | DD Method | Use Case |
+|----------------|-----------|----------|
+| Direct (LU) | ASM, BDDC, FETI | Small subdomains (< 10⁴ dofs) |
+| ILU | ASM | Large subdomains, nonsymmetric |
+| IC | ASM | Large subdomains, SPD |
+| AMG | ASM (two-level) | Very large subdomains |
+
+**Two-Level DD:**
+```
+Preconditioner M⁻¹ = M₀⁻¹ + Σᵢ Rᵢᵀ Aᵢ⁻¹ Rᵢ
+where M₀⁻¹ is a coarse grid correction
+```
+
+The coarse problem couples all subdomains and is essential for scalability.
+
+### Practical Recommendations
+
+**For beginners:**
+- Start with one-level additive Schwarz (ASM) with overlap δ = 1-2
+- Use direct solvers on each subdomain if feasible
+- Add coarse grid correction if iteration count grows with subdomain count
+
+**For production:**
+- BDDC for elasticity on structured or semi-structured meshes
+- FETI-DP for elasticity with complex geometry or contact
+- Two-level ASM for general PDEs with AMG or ILU local solves
+
+**For extreme scale (10⁵-10⁶ cores):**
+- Three-level methods (local, intermediate, coarse)
+- BDDC or FETI-DP with algebraically constructed coarse spaces
+- Careful tuning of coarse problem solver
 
 ## Preconditioner Selection Guide
 

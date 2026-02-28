@@ -1,0 +1,35 @@
+# Claude Code
+.claude*
+CLAUDE.md
+.mcp.json
+backlog.md
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+wheels/
+
+# Virtual environments
+.venv/
+
+# Testing
+.pytest_cache/
+.hypothesis/
+
+# Linting / type-checking caches
+.ruff_cache/
+
+# OS files
+.DS_Store
+
+# Environment variables
+.env
+.env.*
+!.env.*.local

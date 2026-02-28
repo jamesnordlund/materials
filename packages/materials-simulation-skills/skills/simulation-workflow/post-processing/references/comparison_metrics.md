@@ -90,13 +90,31 @@
 
 ### Pearson Correlation
 
-**Formula:** r = Σ[(sᵢ - μs)(rᵢ - μr)] / (σs × σr × n)
+**Formula:** r = Σ[(sᵢ - μs)(rᵢ - μr)] / √[Σ(sᵢ - μs)² × Σ(rᵢ - μr)²]
+
+where μs and μr are the means.
+
+**Two conventions exist:**
+
+**Sample correlation** (recommended for statistical inference):
+r = Σ[(sᵢ - μs)(rᵢ - μr)] / [(n - 1) × σs × σr]
+
+where σs = √[Σ(sᵢ - μs)² / (n - 1)] uses Bessel's correction.
+
+**Population correlation** (used when data is the entire population):
+r = Σ[(sᵢ - μs)(rᵢ - μr)] / [n × σs × σr]
+
+where σ = √[Σ(sᵢ - μs)² / n] uses population variance.
+
+**Note on this implementation**: The comparison_tool.py and statistical_analyzer.py scripts compute correlation using the population formula (without Bessel's correction). When using these tools, be aware that computed correlation values may differ slightly from statistical software (NumPy, SciPy, R) which default to sample correlation. For publication, specify which convention is used.
 
 **Properties:**
 - Range: [-1, 1]
 - r = 1: Perfect positive correlation
 - r = 0: No linear correlation
 - r = -1: Perfect negative correlation
+
+**Reference:** Rodgers & Nicewander (1988), "Thirteen Ways to Look at the Correlation Coefficient," *The American Statistician* 42(1), 59-66.
 
 **Use when:**
 - Testing linear relationship

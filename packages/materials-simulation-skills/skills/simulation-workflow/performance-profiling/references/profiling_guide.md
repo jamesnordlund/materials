@@ -325,20 +325,61 @@ Where:
 - Log timing information to files
 
 ### External Profilers
+
+#### Python Profilers (Modern)
+
+| Tool | Type | Key Feature | Overhead | Install |
+|------|------|-------------|----------|---------|
+| **Scalene** | CPU + Memory | Line-level CPU/memory/GPU profiling with low overhead | ~30% | `pip install scalene` |
+| **py-spy** | Sampling | Rust-based, attach to running processes without modification | <5% | `pip install py-spy` |
+| **Memray** | Memory | Tracks Python AND native C/C++ allocations | Moderate | `pip install memray` |
+| **tracemalloc** | Memory | Built-in Python stdlib (3.4+) | Low | Built-in |
+| **cProfile** | Deterministic | Built-in, function-level timing | ~10-30% | Built-in |
+
+**Usage examples:**
+```bash
+# Scalene: CPU + memory profiling
+scalene simulation.py
+
+# py-spy: Attach to running process
+py-spy top --pid 12345
+py-spy record -o profile.svg --pid 12345
+
+# Memray: Memory tracking with flamegraph output
+memray run simulation.py
+memray flamegraph memray-simulation.bin
+```
+
+#### Traditional Profilers
+
 - **gprof**: GNU profiler (function-level timing)
-- **Valgrind**: Memory profiling and leak detection
-- **Intel VTune**: Comprehensive performance analysis
+- **Valgrind/Callgrind**: Memory profiling, leak detection, and call-graph profiling (Nethercote & Seward, 2007)
+- **Intel VTune**: Comprehensive performance analysis (Intel Corporation)
 - **TAU**: Parallel performance profiling
 - **Scalasca**: Scalability analysis
 
+#### HPC Profilers
+
+| Tool | Focus | Platform |
+|------|-------|----------|
+| **HPCToolkit** | Sampling-based, low overhead | Linux HPC clusters |
+| **ARM Forge (MAP)** | MPI profiling and debugging | ARM/x86 HPC |
+| **Darshan** | I/O characterization | HPC file systems (Lustre, GPFS) |
+| **NVIDIA Nsight** | GPU kernel profiling | CUDA workloads |
+
 ### Profiling Overhead
 - Timing analysis: <1% overhead
-- Memory profiling: 5-10% overhead
-- Detailed profiling (VTune, TAU): 10-50% overhead
+- py-spy, Scalene: <5-30% overhead (sampling-based)
+- Valgrind/Callgrind: 10-100x slowdown (Nethercote & Seward, 2007; Valgrind documentation)
+- Intel VTune: approximately 2-5% overhead (Intel VTune Profiler User Guide)
+- TAU, Scalasca: 10-50% overhead
 
 ## References
 
 - Amdahl, G. M. (1967). "Validity of the single processor approach to achieving large scale computing capabilities"
 - Gustafson, J. L. (1988). "Reevaluating Amdahl's law"
 - Gropp, W., Lusk, E., & Skjellum, A. (1999). "Using MPI: Portable Parallel Programming with the Message-Passing Interface"
+- Nethercote, N., & Seward, J. (2007). "Valgrind: A Framework for Heavyweight Dynamic Binary Instrumentation". ACM SIGPLAN Notices, 42(6), 89-100.
+- Valgrind Documentation. "Callgrind: a call-graph generating cache and branch prediction profiler". https://valgrind.org/docs/manual/cl-manual.html
+- Intel Corporation. "Intel VTune Profiler User Guide". https://www.intel.com/content/www/us/en/docs/vtune-profiler/user-guide/
 

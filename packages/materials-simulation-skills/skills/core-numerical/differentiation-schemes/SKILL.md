@@ -12,7 +12,7 @@ Provide a reliable workflow to select a differentiation scheme, generate stencil
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for stencil computations)
 - No heavy dependencies
 
@@ -79,7 +79,7 @@ Is the field smooth?
    ```bash
    python3 scripts/stencil_generator.py --order 2 --accuracy 4 --scheme central --json
    ```
-3. Result: 5-point stencil with coefficients `[-1/12, 4/3, -5/2, 4/3, -1/12]` / dx².
+3. Result: 5-point stencil with coefficients `[-1/12, 16/12, -30/12, 16/12, -1/12]` / dx² (or equivalently `[-1/12, 4/3, -5/2, 4/3, -1/12]` / dx²).
 
 ## Pre-Discretization Checklist
 
@@ -102,7 +102,7 @@ python3 scripts/stencil_generator.py --order 1 --accuracy 2 --scheme central --j
 python3 scripts/stencil_generator.py --order 2 --accuracy 4 --scheme central --json
 
 # Estimate truncation error
-python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0 --json
+python3 scripts/truncation_error.py --dx 0.01 --accuracy 2 --scale 1.0 --json
 ```
 
 ## Error Handling
@@ -110,8 +110,9 @@ python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `order must be positive` | Invalid derivative order | Use 1, 2, 3, ... |
-| `accuracy must be even for central` | Odd accuracy requested | Use 2, 4, 6, ... |
-| `Unknown scheme` | Invalid scheme type | Use central, upwind, compact |
+| `accuracy must be positive` | Invalid accuracy order | Use 2, 4, 6, ... |
+| `scheme must be central, forward, or backward` | Invalid scheme type | Use central, forward, or backward |
+| `dx must be positive` | Invalid grid spacing | Use positive value |
 
 ## Interpretation Guidance
 

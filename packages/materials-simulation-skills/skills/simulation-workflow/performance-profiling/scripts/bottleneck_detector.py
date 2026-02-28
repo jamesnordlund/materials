@@ -189,7 +189,7 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                     'issue': f"{bottleneck['phase']} dominates runtime ({bottleneck['value']:.1f}%)",
                     'strategies': [
                         'Use algebraic multigrid (AMG) preconditioner',
-                        'Tighten solver tolerance if over-solving',
+                        'Relax solver tolerance if over-solving',
                         'Consider direct solver for small problems',
                         'Profile matrix assembly vs solve time'
                     ]
@@ -265,7 +265,21 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                     'Use single precision where appropriate'
                 ]
             })
-    
+
+        # Process over-solving bottlenecks
+        elif bottleneck['type'] == 'over_solving':
+            recommendations.append({
+                'priority': 'medium',
+                'category': 'solver',
+                'issue': f"{bottleneck['phase']}: {bottleneck['issue']}",
+                'strategies': [
+                    'Relax solver tolerance if over-solving',
+                    'Balance tolerance with solution accuracy requirements',
+                    'Monitor residual convergence to detect unnecessary iterations',
+                    'Consider adaptive tolerance based on time step or nonlinear iteration'
+                ]
+            })
+
     return recommendations
 
 

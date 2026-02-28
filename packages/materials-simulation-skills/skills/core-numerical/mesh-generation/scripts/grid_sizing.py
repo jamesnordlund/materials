@@ -26,8 +26,9 @@ def compute_grid(
 
     counts = [int(math.ceil(length / dx)) for _ in range(dims)]
     notes = []
-    if dx * counts[0] < length:
-        notes.append("Grid does not fully cover length; consider smaller dx.")
+    # Note: The condition dx * counts[0] < length can never be true because
+    # counts[0] = ceil(length/dx), which guarantees dx * counts[0] >= length.
+    # The grid always covers the full length or extends slightly beyond.
 
     return {
         "dx": dx,

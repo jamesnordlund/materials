@@ -56,6 +56,51 @@ Guidance for designing effective parameter sweeps.
     --method lhs --samples 20
 ```
 
+### Sobol Sequences
+
+Sobol low-discrepancy sequences provide more uniform space coverage than LHS, especially for sensitivity analysis.
+
+**When to use**:
+- Need to compute Sobol sensitivity indices
+- Deterministic, reproducible quasi-random coverage
+- Incremental sampling (powers of 2 preferred)
+
+**Example**:
+```bash
+# Use with parameter-optimization DOE generator
+python doe_generator.py --method sobol --params 4 --budget 64
+```
+
+### Halton Sequences
+
+Halton sequences are quasi-random sequences based on different prime bases per dimension.
+
+**When to use**:
+- Low to moderate dimensions (2-10)
+- Need to add points incrementally (any count, not just powers of 2)
+- Simpler alternative to Sobol
+
+**Limitations**:
+- Correlation increases in high dimensions (d > 10)
+- Use scrambled Halton for better uniformity
+
+```python
+from scipy.stats import qmc
+sampler = qmc.Halton(d=4, scramble=True, seed=42)
+points = sampler.random(n=50)
+```
+
+### Quasi-Random vs LHS Comparison
+
+| Property | LHS | Sobol | Halton |
+|----------|-----|-------|--------|
+| Deterministic | No (random) | Yes | Yes |
+| Space-filling | Good | Excellent | Good |
+| Incremental | Hard to extend | Powers of 2 | Any count |
+| Sensitivity analysis | Indirect | Direct (Saltelli) | Indirect |
+| Best dimensions | 3-20 | 2-15 | 2-10 |
+| Efficiency gain over random | ~2-5× | ~5-10× | ~3-7× |
+
 ## Dimension vs Budget Guidelines
 
 | Dimension | Grid (n=5) | Recommended | Method |
@@ -118,7 +163,10 @@ For optimization, normalize all parameters to [0, 1]:
 ### Parameter Constraints
 
 Some parameter combinations may be invalid:
-- `dt < dx^2 / (4*D)` for diffusion stability
+- Diffusion stability (dimension-dependent):
+  - 1D: `dt < dx^2 / (2*D)`
+  - 2D: `dt < dx^2 / (4*D)`
+  - 3D: `dt < dx^2 / (6*D)`
 - `kappa + M < max_value`
 
 **Approach 1**: Generate, then filter

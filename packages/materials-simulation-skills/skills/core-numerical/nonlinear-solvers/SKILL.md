@@ -12,7 +12,7 @@ Provide a universal workflow to select a nonlinear solver, configure globalizati
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for Jacobian diagnostics)
 - SciPy (optional, for advanced analysis)
 
@@ -128,7 +128,8 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 | `problem_size must be positive` | Invalid size | Check problem dimension |
 | `constraint_type must be one of...` | Unknown constraint | Use: none, bound, equality, inequality |
 | `residuals must be non-negative` | Invalid residual data | Check residual computation |
-| `Matrix file not found` | Invalid path | Verify Jacobian file exists |
+| `Failed to load matrix from...` | Invalid matrix file path | Verify Jacobian file exists |
+| `tolerance must be positive` | Invalid tolerance | Use positive tolerance value |
 
 ## Interpretation Guidance
 

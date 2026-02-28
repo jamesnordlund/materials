@@ -35,11 +35,20 @@ def plan_timestep(
     ramp_steps: int,
     ramp_kind: str,
     preview_steps: int,
+    force_unsafe: bool = False,
 ) -> Dict[str, object]:
     if dt_target <= 0 or dt_limit <= 0:
         raise ValueError("dt_target and dt_limit must be positive")
     if safety <= 0:
         raise ValueError("safety must be positive")
+
+    # Check for unsafe safety factor
+    if safety > 1.0:
+        if not force_unsafe:
+            raise ValueError("Safety factor > 1.0 allows dt > dt_limit (unstable). Use --force-unsafe to override.")
+        else:
+            print("WARNING: Safety factor > 1.0 may produce unstable time steps.", file=sys.stderr)
+
     if dt_min is not None and dt_min <= 0:
         raise ValueError("dt_min must be positive")
     if dt_max is not None and dt_max <= 0:
@@ -100,6 +109,12 @@ def parse_args() -> argparse.Namespace:
         help="Number of ramp steps to preview in output",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
+    parser.add_argument(
+        "--force-unsafe",
+        action="store_true",
+        default=False,
+        help="Allow safety factor > 1.0 (may produce unstable time steps)",
+    )
     return parser.parse_args()
 
 
@@ -115,9 +130,14 @@ def main() -> None:
             ramp_steps=args.ramp_steps,
             ramp_kind=args.ramp_kind,
             preview_steps=args.preview_steps,
+            force_unsafe=args.force_unsafe,
         )
     except ValueError as exc:
-        print(str(exc), file=sys.stderr)
+        if args.json:
+            error_output = {"status": "error", "error": str(exc)}
+            print(json.dumps(error_output), file=sys.stdout)
+        else:
+            print(str(exc), file=sys.stderr)
         sys.exit(2)
 
     payload = {

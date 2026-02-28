@@ -25,6 +25,23 @@ import random
 import sys
 from typing import Any, Dict, List, Tuple
 
+# Import path validation from shared module
+try:
+    from skills._shared._path_validation import (
+        add_sandbox_args, resolve_sandbox_root, validate_all_paths,
+    )
+except ImportError:
+    import importlib.util as _ilu
+    _pv_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "_shared", "_path_validation.py",
+    )
+    _pv_spec = _ilu.spec_from_file_location("_path_validation", _pv_path)
+    _pv_mod = _ilu.module_from_spec(_pv_spec)
+    _pv_spec.loader.exec_module(_pv_mod)
+    add_sandbox_args = _pv_mod.add_sandbox_args
+    resolve_sandbox_root = _pv_mod.resolve_sandbox_root
+    validate_all_paths = _pv_mod.validate_all_paths
+
 
 def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
     """Parse parameter specification string.
@@ -78,7 +95,13 @@ def generate_grid(params: List[Tuple[str, float, float, int]]) -> List[Dict[str,
 def generate_linspace(
     params: List[Tuple[str, float, float, int]]
 ) -> Tuple[List[Dict[str, float]], Dict[str, List[float]]]:
-    """Generate grid sweep using linspace for each parameter."""
+    """Generate grid sweep using linspace for each parameter.
+
+    Note: This method is identical to generate_grid() - it creates a full
+    factorial grid of parameter combinations. The 'linspace' naming is kept
+    for backward compatibility, but both 'linspace' and 'grid' methods
+    produce the same output.
+    """
     configs = generate_grid(params)
     param_space = {p[0]: linspace(p[1], p[2], p[3]) for p in params}
     return configs, param_space
@@ -189,6 +212,16 @@ def generate_sweep(
     if not params:
         raise ValueError("No parameters specified")
 
+    # Emit deprecation warning for linspace method
+    if method == "linspace":
+        import warnings
+
+        warnings.warn(
+            "'linspace' method is identical to 'grid'; use 'grid' instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     # Load base config
     base_config = load_base_config(base_config_path)
 
@@ -276,11 +309,20 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Output in JSON format",
     )
+    add_sandbox_args(parser)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+
+    # Validate paths against sandbox root (only when sandbox is explicitly set)
+    if getattr(args, "sandbox_root", None) or os.environ.get("MATERIALS_SANDBOX_ROOT"):
+        sandbox = resolve_sandbox_root(args)
+        path_err = validate_all_paths(args, sandbox, ["base_config", "output_dir"])
+        if path_err is not None:
+            print(f"Path validation error: {path_err}", file=sys.stderr)
+            sys.exit(2)
 
     try:
         result = generate_sweep(

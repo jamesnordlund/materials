@@ -1,0 +1,57 @@
+[project]
+name = "materials-mcp"
+version = "0.2.0"
+description = "Computational Materials Interface (CMI) - High-throughput materials informatics node"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "James Nordlund" }]
+requires-python = ">=3.10"
+keywords = ["mcp", "materials-science", "materials-project", "mpcontribs", "api", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "mcp>=1.9.0,<2",
+    "mp-api>=0.45.0",
+    "pandas>=2.0.0",
+    "pymatgen>=2024.1.0",
+]
+
+[project.optional-dependencies]
+contribs = [
+    "mpcontribs-client>=5.9.0,<6",
+]
+all = [
+    "materials-mcp[contribs]",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+mcp-materials = "mcp_materials.server:main"
+
+[project.urls]
+Homepage = "https://github.com/jamesnordlund/materials"
+Repository = "https://github.com/jamesnordlund/materials"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_materials"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

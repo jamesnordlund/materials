@@ -15,7 +15,10 @@ def select_optimizer(dim: int, budget: int, noise: str, constraints: bool) -> Di
 
     recommended: List[str] = []
     notes: List[str] = []
-    if dim <= 5 and budget <= 100:
+    # BO dimension threshold: 10 dimensions is practical limit for GP-based BO
+    # Reference: Frazier, P. I. (2018). "A Tutorial on Bayesian Optimization."
+    # arXiv:1807.02811. Section 6.2 discusses scalability limits.
+    if dim <= 10 and budget <= 100:
         recommended.append("Bayesian Optimization")
     elif dim <= 20:
         recommended.append("CMA-ES")

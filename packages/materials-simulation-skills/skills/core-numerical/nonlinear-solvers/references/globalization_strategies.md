@@ -90,7 +90,7 @@ Curvature:          |∇f(x_k + α p_k)^T p_k| ≤ c₂ |∇f(x_k)^T p_k|
 |-----------|---------|-------|-------|
 | c₁ | 1e-4 | (0, 0.5) | Sufficient decrease |
 | c₂ (Newton) | 0.9 | (c₁, 1) | Less restrictive |
-| c₂ (quasi-Newton) | 0.5 | (c₁, 1) | More restrictive for BFGS |
+| c₂ (quasi-Newton) | 0.9 | (c₁, 1) | For BFGS/L-BFGS (Nocedal & Wright 2006, p. 33) |
 | c₂ (CG) | 0.1 | (c₁, 0.5) | Very restrictive |
 
 **When to use Wolfe:**
@@ -296,9 +296,13 @@ x_2^{n+1} = x_2^n + ω_2 (x̃_2 - x_2^n)
 ```
 
 **Aitken acceleration:**
+
+Per Kuttler & Wall (2008), the Aitken dynamic relaxation formula is:
 ```
-ω_{k+1} = ω_k × (r_k^T (r_k - r_{k-1})) / ||r_k - r_{k-1}||²
+ω_{k+1} = -ω_k × (r_k^T × (r_{k+1} - r_k)) / ||r_{k+1} - r_k||²
 ```
+
+*Citation: Kuttler, U. & Wall, W.A. (2008). Fixed-point fluid–structure interaction solvers with dynamic relaxation. Computational Mechanics, 43(1), 61-72.*
 
 ## Parameter Selection Guidelines
 
@@ -307,8 +311,8 @@ x_2^{n+1} = x_2^n + ω_2 (x̃_2 - x_2^n)
 | Problem Type | Recommended | Parameters |
 |--------------|-------------|------------|
 | Newton, root-finding | Armijo backtracking | c=1e-4, ρ=0.5 |
-| BFGS optimization | Wolfe | c₁=1e-4, c₂=0.9 |
-| L-BFGS large-scale | Wolfe with interpolation | c₁=1e-4, c₂=0.9 |
+| BFGS optimization | Wolfe | c₁=1e-4, c₂=0.9 (Nocedal & Wright 2006, §3.1) |
+| L-BFGS large-scale | Wolfe with interpolation | c₁=1e-4, c₂=0.9 (Nocedal & Wright 2006, §3.1) |
 | CG optimization | Strong Wolfe | c₁=1e-4, c₂=0.1 |
 
 ### Trust Region Selection

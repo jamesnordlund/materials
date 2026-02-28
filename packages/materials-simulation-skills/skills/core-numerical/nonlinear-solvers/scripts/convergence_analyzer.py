@@ -88,18 +88,26 @@ def analyze_convergence(
         avg_rate = sum(rates) / len(rates)
         estimated_rate = avg_rate
 
-        # Try to detect quadratic convergence by looking at log-log behavior
-        # For quadratic: log(r_{k+1}) ≈ 2 * log(r_k)
+        # Try to detect quadratic convergence using ratio-of-logs approach
+        # For quadratic convergence: log(r_{k+1}/r_k) / log(r_k/r_{k-1}) ≈ 2
+        # This handles residuals > 1, crossing 1, and log sign changes correctly
         if n >= 4 and all(r > 1e-30 for r in residuals):
-            log_residuals = [math.log10(r) for r in residuals if r > 0]
-            if len(log_residuals) >= 4:
-                # Check if log(r_{k+1}) / log(r_k) ≈ 2 for quadratic
-                log_ratios = []
-                for i in range(1, len(log_residuals)):
-                    if abs(log_residuals[i - 1]) > 0.1:
-                        log_ratios.append(log_residuals[i] / log_residuals[i - 1])
+            order_estimates = []
+            for i in range(2, n):
+                if residuals[i - 2] > 1e-30 and residuals[i - 1] > 1e-30 and residuals[i] > 1e-30:
+                    ratio_curr = residuals[i] / residuals[i - 1]
+                    ratio_prev = residuals[i - 1] / residuals[i - 2]
+                    # Both ratios must be positive and ratio_prev must not be 1
+                    if ratio_prev > 0 and ratio_prev != 1.0 and ratio_curr > 0:
+                        try:
+                            order_est = math.log(ratio_curr) / math.log(ratio_prev)
+                            order_estimates.append(order_est)
+                        except (ValueError, ZeroDivisionError):
+                            pass
 
-                if log_ratios and all(1.5 < r < 2.5 for r in log_ratios[-3:]):
+            if len(order_estimates) >= 2:
+                avg_order = sum(order_estimates[-3:]) / len(order_estimates[-3:])
+                if 1.5 < avg_order < 2.5:
                     convergence_type = "quadratic"
                 elif avg_rate < 0.3:
                     convergence_type = "superlinear"

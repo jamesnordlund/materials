@@ -50,14 +50,20 @@ Iteration loop:
 | Parameter | Typical Values | Notes |
 |-----------|----------------|-------|
 | Kernel | Matern 5/2, RBF | Matern more robust for non-smooth |
-| Acquisition | EI, UCB | EI for exploitation, UCB for exploration |
+| Acquisition | EI, UCB | Both balance exploration/exploitation. EI tends toward exploitation in later iterations. UCB balances via explicit parameter (kappa/beta). See Shahriari et al. (2016), Section IV. |
 | Initial points | 5-10 | Use LHS or Sobol |
 
 ### Libraries
 
-- `botorch` (PyTorch-based, production-ready)
-- `scikit-optimize` (sklearn-compatible)
-- `GPyOpt` (flexible but less maintained)
+- **BoTorch** (PyTorch-based GP Bayesian optimization, production-ready)
+  - Install: `pip install botorch`
+  - Docs: https://botorch.org/
+- **Optuna** (General-purpose hyperparameter optimization framework)
+  - Install: `pip install optuna`
+  - Docs: https://optuna.readthedocs.io/
+- **Ax** (Adaptive experimentation platform from Meta)
+  - Install: `pip install ax-platform`
+  - Docs: https://ax.dev/
 
 ---
 
@@ -99,9 +105,13 @@ Iteration loop:
 
 ### Libraries
 
-- `cma` (official Python package)
-- `pycma` (pure Python)
-- `nevergrad` (includes CMA-ES)
+- **CMA-ES** (GitHub: CMA-ES/pycma, PyPI package: `cma`)
+  - Install: `pip install cma`
+  - Repository: https://github.com/CMA-ES/pycma
+  - Docs: https://cma-es.github.io/
+- **Nevergrad** (includes CMA-ES and other gradient-free methods)
+  - Install: `pip install nevergrad`
+  - Docs: https://facebookresearch.github.io/nevergrad/
 
 ---
 
@@ -200,6 +210,12 @@ Are gradients available AND noise is low?
 | 10D multimodal | CMA-ES | 200-500 |
 | 20D multimodal | CMA-ES | 500-2000 |
 | 50D+ | Random/screening | 1000+ |
+
+**Recommended stack for new projects (2024+):**
+- **Single-objective**: Optuna (simple API) or BoTorch (advanced GP control)
+- **Multi-objective**: pymoo (NSGA-II/III) or Optuna (built-in NSGA-II)
+- **Evolutionary**: Nevergrad (CMA-ES, differential evolution) or pycma
+- **Ax** (Meta): High-level platform combining BoTorch with experiment management
 
 ## Implementation Notes
 

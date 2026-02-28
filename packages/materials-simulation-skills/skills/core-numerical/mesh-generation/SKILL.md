@@ -12,7 +12,7 @@ Provide a consistent workflow for selecting mesh resolution and checking mesh qu
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - No external dependencies (uses stdlib)
 
 ## Inputs to Gather
@@ -51,7 +51,9 @@ What is the smallest feature size?
 | Script | Key Outputs |
 |--------|-------------|
 | `scripts/grid_sizing.py` | `dx`, `nx`, `ny`, `nz`, `notes` |
-| `scripts/mesh_quality.py` | `aspect_ratio`, `skewness`, `quality_flags` |
+| `scripts/mesh_quality.py` | `aspect_ratio`, `anisotropy_index`, `quality_flags` |
+
+**Note on skewness metric**: The `mesh_quality.py` script outputs `anisotropy_index` (edge length ratio), NOT standard equiangle skewness. See `references/quality_metrics.md` for the distinction and interpretation guidance. For production work, consider external tools (ANSYS, Salome) that compute equiangle skewness per Knupp 2001 standard.
 
 ## Workflow
 
@@ -91,7 +93,7 @@ python3 scripts/grid_sizing.py --length 1.0 --resolution 200 --json
 python3 scripts/mesh_quality.py --dx 1.0 --dy 0.5 --dz 0.5 --json
 
 # High aspect ratio check
-python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
+python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --dz 0.1 --json
 ```
 
 ## Error Handling
@@ -99,8 +101,8 @@ python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `length must be positive` | Invalid domain size | Use positive value |
-| `resolution must be > 1` | Insufficient points | Use at least 2 |
-| `dx, dy must be positive` | Invalid spacing | Use positive values |
+| `resolution must be positive` | Invalid resolution | Use positive value |
+| `dx, dy, dz must be positive` | Invalid spacing | Use positive values for all dimensions |
 
 ## Interpretation Guidance
 

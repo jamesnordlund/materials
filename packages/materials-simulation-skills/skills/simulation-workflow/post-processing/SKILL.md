@@ -318,6 +318,18 @@ All scripts support `--json` flag for machine-readable output:
 }
 ```
 
+## Error Handling
+
+| Error | Cause | Resolution |
+|-------|-------|------------|
+| `File not found` | Invalid input path | Verify file path exists |
+| `Unsupported file format` | Unknown file extension | Use JSON or CSV format |
+| `Cannot extract {axis} profile from {ndim}D data` | Dimension mismatch | Verify field dimensionality matches axis request |
+| `Line profiles not supported for {ndim}D data` | Invalid dimensionality | Use 2D or 3D field data |
+| `Length mismatch` | Simulation and reference data sizes differ | Ensure data arrays have same length or use --interpolate |
+| `Field not found` | Requested field doesn't exist | Check available fields with --list |
+| `Invalid quantity` | Unknown derived quantity | Use supported quantities (see derived_quantities.py --help) |
+
 ## References
 
 For detailed information, see:
@@ -329,7 +341,7 @@ For detailed information, see:
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for numerical operations)
 - No other external dependencies for core functionality
 

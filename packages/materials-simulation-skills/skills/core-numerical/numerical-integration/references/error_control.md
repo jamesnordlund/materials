@@ -9,9 +9,11 @@ Comprehensive guide for adaptive step size control in time integration.
 The standard approach scales the error by tolerance:
 
 ```
-scale_i = atol_i + rtol × max(|y_n,i|, |y_{n+1},i|)
+scale_i = atol_i + rtol × |y_i|
 err_scaled_i = error_i / scale_i
 ```
+
+Where `y_i` is the solution component at the current step. Some implementations use `max(|y_n|, |y_{n+1}|)` for more conservative scaling; see your integrator's documentation for specifics.
 
 ### Norm Types
 

@@ -12,7 +12,7 @@ Provide a reliable workflow to select integrators, set tolerances, and manage ad
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for some scripts)
 - No heavy dependencies for core functionality
 
@@ -114,9 +114,9 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `rtol and atol must be positive` | Invalid tolerances | Use positive values |
-| `error-norm must be positive` | Negative error norm | Check error computation |
-| `Unknown controller` | Invalid controller type | Use `i`, `pi`, or `pid` |
+| `rtol and atol must be non-negative` | Invalid tolerances | Use non-negative values |
+| `norm must be 'rms' or 'inf'` | Invalid norm type | Use 'rms' or 'inf' |
+| `Unknown controller` | Invalid controller type | Use `p` (proportional) or `pi` (proportional-integral) |
 | `Splitting requires at least one term` | Empty term list | Specify stiff or nonstiff terms |
 
 ## Interpretation Guidance
@@ -133,9 +133,8 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 | Controller | Properties | Best For |
 |------------|------------|----------|
-| I (integral) | Simple, some overshoot | Non-stiff, moderate accuracy |
+| P (proportional) | Simple, some overshoot | Non-stiff, moderate accuracy |
 | PI (proportional-integral) | Smooth, robust | General use |
-| PID | Aggressive adaptation | Rapidly varying dynamics |
 
 ### IMEX Strategy
 

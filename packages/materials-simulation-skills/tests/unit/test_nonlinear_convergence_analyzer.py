@@ -83,6 +83,39 @@ class TestNonlinearConvergenceAnalyzer(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.analyze_convergence([1.0, 0.5], tolerance=-1e-10)
 
+    def test_convergence_detection_residuals_below_one(self):
+        """Test REQ-B03: Convergence order detection with residuals < 1."""
+        # Quadratic convergence with residuals < 1
+        # r_k = 0.1 * r_{k-1}^2, starting from r_0 = 0.1
+        residuals = [0.1, 0.001, 1e-6, 1e-12, 1e-24]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-15)
+        self.assertTrue(result["converged"])
+        # Should detect quadratic convergence
+        self.assertIn(result["convergence_type"], ["quadratic", "superlinear"])
+
+    def test_convergence_detection_residuals_above_one(self):
+        """Test REQ-B03: Convergence order detection with residuals > 1."""
+        # Quadratic convergence with residuals > 1 initially
+        # If r_k = r_{k-1}^2 / C (with appropriate scaling), we can have quadratic
+        # convergence even when starting from r > 1
+        residuals = [10.0, 1.0, 0.01, 1e-6, 1e-14]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-10)
+        self.assertTrue(result["converged"])
+        # The ratio-of-logs approach should correctly detect the convergence pattern
+
+    def test_convergence_detection_residuals_crossing_one(self):
+        """Test REQ-B03: Convergence order detection when residuals cross 1.
+
+        This tests that the formula handles the case where log(r_k) changes sign.
+        The ratio-of-logs approach: log(r_{k+1}/r_k) / log(r_k/r_{k-1})
+        should work correctly even when residuals cross 1.
+        """
+        # Residuals that cross 1: starts above, crosses through 1, continues below
+        residuals = [5.0, 2.5, 1.0, 0.2, 0.01, 1e-4, 1e-8]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-6)
+        self.assertTrue(result["converged"])
+        # Should successfully analyze without errors due to log sign changes
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,37 +17,18 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
-def load_csv_file(filepath: str) -> Dict[str, List[Any]]:
-    """Load CSV file as column-based dict."""
-    data = {}
-
-    with open(filepath, "r") as f:
-        lines = f.readlines()
-
-    if not lines:
-        return data
-
-    header = lines[0].strip().split(",")
-    for col in header:
-        data[col] = []
-
-    for line in lines[1:]:
-        values = line.strip().split(",")
-        for i, col in enumerate(header):
-            if i < len(values):
-                try:
-                    data[col].append(float(values[i]))
-                except ValueError:
-                    data[col].append(values[i])
-
-    return data
+# Import shared utilities
+try:
+    from ._utils import load_json_file, load_csv_file, flatten_field
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    load_csv_file = _utils.load_csv_file
+    flatten_field = _utils.flatten_field
 
 
 def load_data(filepath: str) -> Dict[str, Any]:
@@ -98,17 +79,8 @@ def extract_values(
     return values, coords
 
 
-def flatten_list(data: Any) -> List[float]:
-    """Flatten nested list."""
-    if not isinstance(data, list):
-        if isinstance(data, (int, float)):
-            return [float(data)]
-        return []
-
-    result = []
-    for item in data:
-        result.extend(flatten_list(item))
-    return result
+# Use flatten_field from _utils (renamed from flatten_list for consistency)
+flatten_list = flatten_field
 
 
 def interpolate_1d(

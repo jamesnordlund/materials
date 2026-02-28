@@ -45,8 +45,11 @@ def compute_step(
     else:
         exp = 1.0 / (order + 1.0)
         if controller == "pi" and prev_error is not None:
-            k1 = 0.7 * exp
-            k2 = 0.3 * exp
+            # PI controller coefficients per Soderlind (2003), ACM Trans. Math. Softw. 29(1)
+            # k1 is the proportional (P) gain, k2 is the integral (I) gain
+            # Naming follows Soderlind's framework: "i" for integral, not "p" for proportional
+            k1 = 0.7 * exp  # proportional gain
+            k2 = 0.4 * exp  # integral gain (updated from 0.3 per Soderlind 2003)
             factor = safety * (accept_threshold / error_norm) ** k1
             factor *= (accept_threshold / prev_error) ** k2
             controller_used = "pi"

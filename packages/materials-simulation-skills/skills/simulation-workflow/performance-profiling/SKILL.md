@@ -12,7 +12,7 @@ Provide tools to analyze simulation performance, identify bottlenecks, and recom
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - No external dependencies (uses Python standard library only)
 - Works on Linux, macOS, and Windows
 
@@ -198,16 +198,25 @@ python3 scripts/bottleneck_detector.py \
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `Log file not found` | Invalid path | Verify log file path |
-| `No timing data found` | Pattern mismatch | Provide custom pattern with --pattern |
-| `At least 2 runs required` | Insufficient data | Provide more scaling runs |
-| `Missing required parameters` | Incomplete params | Add mesh and fields to params file |
+| `Log file not found` | Invalid path to log file | Verify log file path exists |
+| `Timing analysis file not found` | Invalid timing JSON path | Verify timing results file path |
+| `Invalid timing JSON` | Malformed JSON in timing file | Check JSON syntax |
+| `Scaling data file not found` | Invalid scaling JSON path | Verify scaling results file path |
+| `Invalid JSON format` | Malformed JSON | Check JSON syntax |
+| `JSON must contain 'runs' array` | Missing runs field | Add "runs" array to scaling data |
+| `At least 2 runs required for scaling analysis` | Insufficient runs | Provide at least 2 scaling runs |
+| `Run X missing 'processors' field` | Missing required field | Add "processors" to each run |
+| `Run X missing 'time' field` | Missing required field | Add "time" to each run |
+| `Run X has invalid time` | Non-positive time value | Provide positive time value |
+| `Run X has invalid processor count` | Non-positive processor count | Provide positive processor count |
+| `Parameters file not found` | Invalid params path | Verify parameters file path |
+| `Missing required parameters: mesh, fields` | Incomplete parameters | Add mesh and fields to params file |
 
 ## Optimization Strategies by Bottleneck Type
 
 ### Solver Bottlenecks
 - Use algebraic multigrid (AMG) preconditioner
-- Tighten solver tolerance if over-solving
+- Relax solver tolerance if over-solving
 - Consider direct solver for small problems
 - Profile matrix assembly vs solve time
 

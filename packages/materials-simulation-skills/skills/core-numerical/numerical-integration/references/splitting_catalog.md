@@ -41,9 +41,9 @@ Step 2: Solve du/dt = B(u) for time dt starting from u* → u_{n+1}
 
 **Error:**
 ```
-Error ≈ (dt/2) × [A, B] × u
+Error ≈ (dt²/2) × [A, B] × u
 ```
-Where [A, B] = AB - BA is the commutator.
+Where [A, B] = AB - BA is the commutator. The leading-order splitting error is O(dt²) even though the method is first-order overall (Hairer, Lubich & Wanner (2006), "Geometric Numerical Integration," Springer, Section II.5).
 
 ### Choosing Order (A then B vs B then A)
 
@@ -70,9 +70,9 @@ Step 3: Solve du/dt = A(u) for time dt/2 → u_{n+1}
 
 **Error:**
 ```
-Error ≈ (dt²/24) × [[A, B], A + B] × u
+Error ≈ (dt³/24) × [[A, B], A + B] × u + O(dt³)
 ```
-Involves nested commutators.
+The leading-order error involves O(dt³) terms with nested commutators (Hairer, Lubich & Wanner (2006), "Geometric Numerical Integration," Springer, Section II.5).
 
 ### Marchuk-Strang Alternating
 

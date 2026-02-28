@@ -299,9 +299,13 @@ For very ill-conditioned systems:
 When solving Ax = λx after scaling D_r A D_c:
 
 ```
-Eigenvalues: Same (scaling is similarity transform)
-Eigenvectors: v_original = D_c × v_scaled
+Eigenvalues: Preserved ONLY for similarity transforms (D_c = D_r⁻¹)
+  - For general scaling D_r A D_c, eigenvalues change unless D_c = D_r⁻¹
+  - Symmetric scaling D A D is a similarity transform: D⁻¹(DAD)D = A
+Eigenvectors: v_original = D_c × v_scaled (for similarity transform)
 ```
+
+**Reference:** Golub, G.H. & Van Loan, C.F. (2013). *Matrix Computations*, 4th ed., Johns Hopkins University Press, Section 7.1 (Similarity Transformations).
 
 ### Block Scaling
 

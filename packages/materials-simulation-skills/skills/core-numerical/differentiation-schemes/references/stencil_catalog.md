@@ -206,6 +206,10 @@ Requires solving tridiagonal system for f'.
 where α = 1/3, a = 14/9, b = 1/9
 ```
 
+**Notation Convention:** We follow Lele's notation throughout. The tridiagonal system coefficients (α on the left-hand side, a and b on the right-hand side) are exactly as specified in Lele (1992), Table 1, for the 6th-order centered scheme. The solution procedure involves solving a tridiagonal linear system for the derivative values at all grid points.
+
+**Reference:** Lele, S. K. "Compact finite difference schemes with spectral-like resolution," *J. Comput. Phys.* **103**(1), 16-42 (1992), Table 1.
+
 ### Advantages of Compact Schemes
 
 | Property | Explicit | Compact |
@@ -273,6 +277,104 @@ Good balance of accuracy and stability.
 | Upwind | Moderate | High |
 | Compact | Very low | None |
 | WENO | Low | Adaptive |
+
+## Summation-by-Parts (SBP) Operators
+
+SBP operators are finite difference operators that satisfy a discrete analogue of integration by parts, enabling provable energy stability when paired with Simultaneous Approximation Terms (SATs) for boundary conditions.
+
+### Structure
+
+An SBP first-derivative operator D₁ satisfies:
+
+```
+H D₁ + D₁ᵀ H = E
+
+where:
+  H = positive-definite diagonal (or block-diagonal) norm matrix
+  E = boundary quadrature matrix (E = diag(-1, 0, ..., 0, 1) for 1D)
+```
+
+### Key Properties
+
+| Property | Benefit |
+|----------|---------|
+| Energy stability | Provable bounds on solution growth |
+| Conservation | Discrete conservation for linear/nonlinear problems |
+| High order | 2p interior order with p-order boundary closures |
+| Multi-block | Natural coupling via SATs at interfaces |
+
+### Common SBP Operators
+
+| Interior Order | Boundary Order | Stencil Width | Reference |
+|---------------|----------------|---------------|-----------|
+| 2 | 1 | 3 | Kreiss & Scherer (1974) |
+| 4 | 2 | 5 | Strand (1994) |
+| 6 | 3 | 7 | Strand (1994) |
+| 8 | 4 | 9 | Mattsson (2003) |
+
+### When to Use SBP-SAT
+
+- Long-time simulations requiring provable stability
+- Multi-block or overset grid configurations
+- Hyperbolic or advection-dominated PDEs
+- Problems where energy estimates are critical (aeroelasticity, electromagnetics)
+
+**References:**
+- Svärd, M. & Nordström, J. (2014). Review of summation-by-parts schemes for initial-boundary-value problems. *J. Comput. Phys.*, 268, 17-38.
+- Fernández, D.C.D.R., Hicken, J.E., & Zingg, D.W. (2014). Review of summation-by-parts operators with simultaneous approximation terms. *Comput. Fluids*, 95, 171-196.
+
+## Nonuniform Grid Stencils
+
+For grids with variable spacing, standard uniform stencils do not apply directly. Two main approaches exist.
+
+### Fornberg's Algorithm
+
+Computes finite difference weights for arbitrary node locations. Given nodes x₀, x₁, ..., xₙ, Fornberg's algorithm produces weights for any derivative order at any evaluation point.
+
+```python
+def fornberg_weights(z, x, m):
+    """Compute FD weights for derivative order m at point z using nodes x.
+
+    Reference: Fornberg, B. (1988). Generation of finite difference
+    formulas on arbitrarily spaced grids. Math. Comp., 51(184), 699-706.
+    """
+    n = len(x) - 1
+    c = [[0.0] * (m + 1) for _ in range(n + 1)]
+    c[0][0] = 1.0
+    c1 = 1.0
+    for i in range(1, n + 1):
+        c2 = 1.0
+        for j in range(i):
+            c3 = x[i] - x[j]
+            c2 *= c3
+            for k in range(min(i, m), 0, -1):
+                c[i][k] = (c1 * (k * c[i-1][k-1] - (x[i-1] - z) * c[i-1][k])) / c2
+            c[i][0] = -c1 * (x[i-1] - z) * c[i-1][0] / c2
+            for k in range(min(i, m), 0, -1):
+                c[j][k] = ((x[i] - z) * c[j][k] - k * c[j][k-1]) / c3
+            c[j][0] = (x[i] - z) * c[j][0] / c3
+        c1 = c2
+    return [c[j][m] for j in range(n + 1)]
+```
+
+### Coordinate Transformation
+
+Map nonuniform physical grid to uniform computational grid:
+
+```
+ξ = ξ(x)  (mapping function)
+df/dx = (dξ/dx) × df/dξ
+d²f/dx² = (dξ/dx)² × d²f/dξ² + (d²ξ/dx²) × df/dξ
+```
+
+Apply standard uniform stencils in ξ-space, then transform back.
+
+**When to prefer each approach:**
+| Approach | Best For |
+|----------|----------|
+| Fornberg weights | Arbitrary node placement, unstructured 1D |
+| Coordinate transform | Smoothly varying grids, structured meshes |
+| SBP on nonuniform | When energy stability proofs are needed |
 
 ## Implementation Notes
 

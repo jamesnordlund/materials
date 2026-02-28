@@ -13,21 +13,39 @@ This catalog summarizes stability properties of common time integration and spat
 | Scheme | Order | Stability | CFL Limit | Memory | Notes |
 |--------|-------|-----------|-----------|--------|-------|
 | Forward Euler | 1 | Conditional | Region-dependent | Low | Simple but diffusive |
-| RK2 (Heun) | 2 | Conditional | C ≤ ~1 | Low | Better accuracy |
-| RK4 (Classic) | 4 | Conditional | C ≤ ~1.4 | Low | Most common explicit |
+| RK2 (Heun) | 2 | Conditional | Limited; see note below | Low | Stability region has very limited imaginary axis coverage (Strikwerda 2004, Ch. 7) |
+| RK4 (Classic) | 4 | Conditional | C ≤ 2√2 ≈ 2.83 | Low | Most common explicit (Gottlieb & Shu 1998, Table 3.1) |
 | RK45 (Dormand-Prince) | 4/5 | Conditional | Adaptive | Medium | Error estimation |
 | Adams-Bashforth 2 | 2 | Conditional | C ≤ ~0.5 | Low | Multi-step, cheaper |
 | Adams-Bashforth 4 | 4 | Conditional | C ≤ ~0.3 | Low | More restrictive |
 | Leapfrog | 2 | Neutral | C ≤ 1 | Low | No damping, needs filter |
 
+**Note on RK2 (Heun):** The primary instability issue with RK2 + central differences for advection is the spatial discretization: central differences add no numerical dissipation, and RK2's stability region has very limited intersection with the imaginary axis. The combination is problematic for oscillatory or advection-dominated problems. However, RK2 is stable for diffusion problems (negative real eigenvalues). The instability is not unique to RK2 but is more severe than with RK4, whose stability region does intersect the imaginary axis.
+
+### SSP (Strong Stability Preserving) Methods
+
+| Scheme | Order | SSP Coeff. | CFL Multiplier | Notes |
+|--------|-------|------------|----------------|-------|
+| SSP-RK(2,2) | 2 | 1.0 | 1.0× Euler | Preserves TVD under Euler CFL |
+| SSP-RK(3,3) | 3 | 1.0 | 1.0× Euler | Optimal 3rd-order SSP (Shu & Osher 1988) |
+| SSP-RK(5,4) | 4 | 1.508 | 1.508× Euler | 50% larger CFL than Euler for same TVD |
+| SSP-RK(10,4) | 4 | 6.0 | 6.0× Euler | Many stages but very large SSP coefficient |
+
+SSP methods preserve nonlinear stability properties (TVD, positivity) of forward Euler under a modified CFL condition: Δt ≤ c × Δt_FE, where c is the SSP coefficient.
+
+**Use for:** Hyperbolic conservation laws, shock-capturing, any problem requiring TVD or positivity.
+
+**Reference:** Gottlieb, S., Ketcheson, D.I., & Shu, C.-W. (2011). *Strong Stability Preserving Runge-Kutta and Multistep Methods*, World Scientific.
+
 ### Implicit Methods
 
 | Scheme | Order | Stability | Properties | Memory | Notes |
 |--------|-------|-----------|------------|--------|-------|
-| Backward Euler | 1 | A-stable | Unconditional | Medium | Very diffusive |
+| Backward Euler | 1 | A-stable, L-stable | Unconditional | Medium | Very diffusive |
 | Crank-Nicolson | 2 | A-stable | Unconditional | Medium | May oscillate |
-| BDF2 | 2 | A-stable | Unconditional | Medium | Good for stiff |
-| BDF3-6 | 3-6 | A(α)-stable | Nearly unconditional | Medium | Higher order |
+| BDF2 | 2 | A-stable, L-stable | Unconditional | Medium | Good for stiff (Hairer & Wanner 1996, Sec. V.2, Thm. 2.2) |
+| BDF3-5 | 3-5 | A(α)-stable | Stable within A(α) wedge only | Medium | Not A-stable (Dahlquist barrier); eigenvalues near the imaginary axis may be unstable. See BDF Methods table below for per-order α values. |
+| BDF6 | 6 | A(α)-stable, α=17° | Narrow stability wedge | Medium | Avoid unless necessary |
 | Radau IIA | 3,5 | L-stable | Unconditional | High | Very stiff problems |
 | SDIRK | 2-4 | L-stable | Unconditional | Medium | Good balance |
 
@@ -48,7 +66,7 @@ This catalog summarizes stability properties of common time integration and spat
 | Scheme | Order | Stability | Dispersion | Diffusion |
 |--------|-------|-----------|------------|-----------|
 | Upwind (1st order) | 1 | Stable for C ≤ 1 | High | Adds artificial |
-| Central (2nd order) | 2 | **Unstable** | Moderate | None |
+| Central (2nd order) | 2 | **Unstable with forward Euler (FTCS)** | Moderate | None |
 | Upwind (3rd order) | 3 | Stable for C ≤ 1 | Low | Small artificial |
 | QUICK | 3 | Conditional | Low | Small |
 | WENO5 | 5 | Conditional | Very low | Adaptive |
@@ -58,7 +76,7 @@ This catalog summarizes stability properties of common time integration and spat
 | Scheme | Order | Stability (1D) | Notes |
 |--------|-------|----------------|-------|
 | Central (3-point) | 2 | Fo ≤ 0.5 | Standard |
-| Central (5-point) | 4 | Fo ≤ 0.5 | Higher accuracy |
+| Central (5-point) | 4 | Fo ≤ 0.375 | Higher accuracy, MORE restrictive than 3-point (Strikwerda 2004, Sec. 7.3) |
 | Compact (Padé) | 4-6 | Similar | Implicit system |
 
 ---
@@ -75,12 +93,14 @@ A-stable methods:
 ✓ Crank-Nicolson
 ✓ BDF1-2
 ✓ Radau IIA
-✓ All fully implicit methods
 
 Not A-stable:
 ✗ All explicit methods
-✗ BDF3-6 (A(α)-stable only)
+✗ BDF3-6 (A(α)-stable only; NOT A-stable per Dahlquist's second barrier)
 ✗ Adams methods
+
+Note: Not all implicit methods are A-stable. BDF3-6 are fully implicit
+but NOT A-stable (Dahlquist 1963; Hairer & Wanner 1996, Sec. V.1).
 ```
 
 ### L-Stability
@@ -90,6 +110,7 @@ A method is **L-stable** if A-stable and `|R(z)| → 0` as `Re(z) → -∞`.
 ```
 L-stable methods:
 ✓ Backward Euler
+✓ BDF2
 ✓ Radau IIA
 ✓ SDIRK methods
 
@@ -146,7 +167,7 @@ A-stable but not L-stable:
 | Order | Stability | Error Constant |
 |-------|-----------|----------------|
 | BDF1 | A-stable, L-stable | 1 |
-| BDF2 | A-stable | 2/3 |
+| BDF2 | A-stable, L-stable | 2/3 |
 | BDF3 | A(86°)-stable | 6/11 |
 | BDF4 | A(73°)-stable | 12/25 |
 | BDF5 | A(51°)-stable | 60/137 |
@@ -160,7 +181,7 @@ A-stable but not L-stable:
 |---------|----|----|----|----|------|-------|
 | Order | 1 | 1 | 2 | 4 | 2 | 3-5 |
 | A-stable | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
-| L-stable | ✗ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| L-stable | ✗ | ✓ | ✗ | ✗ | ✓ | ✓ |
 | Linear solve | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
 | Memory | Low | Med | Med | Low | Med | High |
 | Stiff OK | ✗ | ✓ | ⚠️ | ✗ | ✓ | ✓ |

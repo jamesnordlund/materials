@@ -13,7 +13,8 @@ dt_adv ≤ C_adv × dx / |v_max|
 
 C_adv depends on scheme:
 - First-order upwind: C_adv = 1.0
-- Second-order central: C_adv = 1.0 (with proper time stepping)
+- Second-order central differences with RK2 or higher: C_adv ≈ 1.0
+  (Note: FTCS (Forward Euler + Central Differences) is unconditionally unstable for advection; Strikwerda 2004, Ch. 3)
 - Third-order upwind: C_adv ≈ 0.87
 - Fourth-order central: C_adv ≈ 0.72
 - WENO5: C_adv ≈ 0.5-1.0 (depends on smoothness)
@@ -26,14 +27,20 @@ For diffusion equation: ∂u/∂t = D∇²u
 ```
 dt_diff ≤ C_diff × dx² / D
 
-In 1D: C_diff = 0.5 (explicit Euler)
+In 1D: C_diff = 0.5 (explicit Euler, e.g., FTCS)
 In 2D: C_diff = 0.25 (explicit Euler)
 In 3D: C_diff = 0.167 (explicit Euler)
 
+Note: FTCS is conditionally stable for diffusion when dt ≤ dx²/(2D) in 1D;
+it is unconditionally unstable for advection.
+This is why FTCS is recommended for parabolic (diffusion) but not hyperbolic (advection) equations.
+
 Higher-order time stepping:
-- RK4: C_diff up to ~2.8/dim
+- RK4: C_diff up to ~0.7/dim (factor of ~2.785 stability region for pure diffusion, divided by dimension)
 - DuFort-Frankel: unconditionally stable
 - Implicit: no limit (but accuracy limits apply)
+
+**Note:** The RK4 diffusion limit comes from the intersection of the stability region of classical RK4 with the negative real axis.
 ```
 
 ### Reaction Limit
@@ -79,7 +86,7 @@ dt = safety × dt_limit
 | Aggressive | 0.95 |
 | Testing | 0.99 |
 
-### Harmonic Mean (Less Conservative)
+### Reciprocal Sum (More Conservative)
 
 For coupled physics where limits interact:
 
@@ -88,6 +95,8 @@ For coupled physics where limits interact:
 
 Equivalent to: dt_limit = (dt_adv × dt_diff) / (dt_adv + dt_diff)
 ```
+
+**Note:** This reciprocal sum is always strictly less than min(dt_adv, dt_diff) for positive values, because dt_adv + dt_diff > max(dt_adv, dt_diff), so (dt_adv × dt_diff) / (dt_adv + dt_diff) < min(dt_adv, dt_diff). This makes it MORE conservative than simply taking the minimum, accounting for additive interaction between stability constraints.
 
 ### Dimensional Coupling
 
@@ -142,11 +151,17 @@ Re = |u|L/ν
 ### Elastodynamics
 
 ```
-Wave speed: c = sqrt(E/ρ) or sqrt((λ+2μ)/ρ)
+Wave speeds (distinguish by dimensionality):
+- 1D bar wave speed: c_bar = sqrt(E/ρ)
+- 3D P-wave (longitudinal) speed: c_p = sqrt((λ + 2μ)/ρ)
+- 3D S-wave (shear) speed: c_s = sqrt(μ/ρ)
 
-CFL: dt ≤ dx / c
+CFL: dt ≤ dx / c_max
 
+For 3D elasticity, c_p > c_s, so P-wave speed typically limits the time step.
 For explicit schemes, this is typically the limiting factor.
+
+Reference: Graff (1975), Wave Motion in Elastic Solids, Ch. 1-2.
 ```
 
 ## Practical Computation
@@ -253,6 +268,81 @@ Level 2: dx_2 = dx_0/4, dt_2 = dt_0/4
 
 Subcycling: Fine levels take multiple steps per coarse step.
 ```
+
+## Error-Based Adaptive Time Stepping
+
+### Embedded Runge-Kutta Pairs
+
+Embedded RK methods provide two solutions of different orders from the same function evaluations, enabling local error estimation without extra cost.
+
+**Common Pairs:**
+
+| Pair | Orders | Stages | FSAL | Reference |
+|------|--------|--------|------|-----------|
+| Heun-Euler | 2(1) | 2 | No | Simplest embedded pair |
+| Bogacki-Shampine | 3(2) | 4 | Yes | MATLAB ode23 |
+| Dormand-Prince | 5(4) | 7 | Yes | MATLAB ode45, scipy RK45 |
+| DOP853 | 8(5,3) | 12 | Yes | High-accuracy problems |
+
+**Error Estimate:**
+```
+err = ||y_high - y_low|| / (atol + rtol × ||y||)
+
+Accept step if err ≤ 1
+Reject step if err > 1
+```
+
+### PI/PID Step Size Controllers
+
+Standard adaptive step control uses the error estimate to compute the next step size.
+
+**Elementary Controller (I-controller):**
+```
+h_{n+1} = h_n × (tol / err_n)^(1/p)
+
+where p = order of the lower-order method
+```
+
+**PI Controller (recommended):**
+```
+h_{n+1} = h_n × (tol / err_n)^β₁ × (tol / err_{n-1})^β₂
+
+Typical parameters (Gustafsson 1991):
+  β₁ = 0.7/p, β₂ = -0.4/p (for method of order p)
+```
+
+The PI controller uses history from the previous step to smooth step size changes and avoid oscillatory step size sequences.
+
+**PID Controller:**
+```
+h_{n+1} = h_n × (err_{n-1}/err_n)^β₁ × (tol/err_n)^β₂ × (err_{n-1}/err_{n-2})^β₃
+
+Typical: β₁ = 0.49/p, β₂ = 0.34/p, β₃ = 0.10/p
+```
+
+**Controller Selection Guide:**
+
+| Controller | Smoothness | Robustness | When to Use |
+|------------|------------|------------|-------------|
+| I (elementary) | Poor | Good | Prototyping, simple problems |
+| PI | Good | Very good | Default choice for production |
+| PID | Very good | Excellent | Stiff problems, oscillatory error |
+
+**Reference:** Gustafsson, K. (1991). Control-theoretic techniques for stepsize selection in explicit Runge-Kutta methods. *ACM Trans. Math. Softw.*, 17(4), 533-554.
+
+### IMEX Time Step Selection
+
+For IMEX methods treating stiff terms implicitly and non-stiff terms explicitly:
+
+```
+dt is limited by the EXPLICIT part only:
+  dt ≤ CFL_explicit × dx / |v_explicit|
+
+The implicit part has no stability restriction on dt,
+but accuracy may degrade for very large dt.
+```
+
+**Practical guideline:** Start with the explicit CFL limit, then increase dt if accuracy permits. Monitor the implicit solver convergence - if it requires many iterations, dt may be too large for accuracy even though it's stable.
 
 ## Common Pitfalls
 

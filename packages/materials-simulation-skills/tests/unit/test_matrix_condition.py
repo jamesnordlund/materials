@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse
 
 from tests.unit._utils import load_module
 
@@ -68,6 +69,44 @@ class TestMatrixCondition(unittest.TestCase):
     def test_invalid_norm(self):
         with self.assertRaises(ValueError):
             self.mod.parse_norm("bad")
+
+
+    def test_sparse_non_finite_nan(self):
+        """Sparse matrix with NaN in .data should raise ValueError."""
+        dense = np.array([[1.0, 0.0], [0.0, float("nan")]])
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        with self.assertRaises(ValueError, msg="matrix contains non-finite values"):
+            self.mod.compute_condition(
+                matrix=sparse_matrix,
+                norm=2.0,
+                symmetry_tol=1e-8,
+                skip_eigs=True,
+            )
+
+    def test_sparse_non_finite_inf(self):
+        """Sparse matrix with Inf in .data should raise ValueError."""
+        dense = np.array([[float("inf"), 0.0], [0.0, 1.0]])
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        with self.assertRaises(ValueError, msg="matrix contains non-finite values"):
+            self.mod.compute_condition(
+                matrix=sparse_matrix,
+                norm=2.0,
+                symmetry_tol=1e-8,
+                skip_eigs=True,
+            )
+
+    def test_sparse_finite_succeeds(self):
+        """Valid sparse matrix should compute condition number without error."""
+        dense = np.array([[1.0, 0.0], [0.0, 2.0]])
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        result = self.mod.compute_condition(
+            matrix=sparse_matrix,
+            norm=2.0,
+            symmetry_tol=1e-8,
+            skip_eigs=True,
+        )
+        self.assertTrue(result["is_sparse"])
+        self.assertAlmostEqual(result["condition_number"], 2.0, places=1)
 
 
 if __name__ == "__main__":

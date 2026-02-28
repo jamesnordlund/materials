@@ -4,11 +4,15 @@
 
 This document defines the complete validation protocol for materials simulations. Each stage has specific checks, criteria, and actions.
 
+**Standards Mapping:** This validation protocol implements verification and validation activities consistent with ASME V&V 10-2006 (code verification), ASME V&V 20-2009 (CFD/heat transfer validation), ASME V&V 40-2018 (risk-informed credibility), and NASA-STD-7009A (M&S credibility). See `vv_standards.md` for detailed standard mappings and terminology crosswalks.
+
 ---
 
 ## Stage 1: Pre-flight Checks
 
 Run before simulation starts. Any BLOCKER prevents simulation launch.
+
+**Standards Reference:** This stage implements code verification (ASME V&V 10-2006 Section 3.2) and verification planning (NASA-STD-7009A Section 3.2). See `vv_standards.md` for detailed mapping.
 
 ### 1.1 Configuration Validation
 
@@ -20,6 +24,8 @@ Run before simulation starts. Any BLOCKER prevents simulation launch.
 | Units consistent | All parameters use compatible units | WARNING |
 
 ### 1.2 Stability Checks
+
+**Standards Reference:** These checks align with ASME V&V 20-2009 Section 5.2 (Numerical Error Estimation) and NASA-STD-7009A Section 3.3 (Verification Methods). See `vv_standards.md` for applicability guidance.
 
 | Check | Criteria | Severity |
 |-------|----------|----------|
@@ -60,6 +66,8 @@ Run before simulation starts. Any BLOCKER prevents simulation launch.
 
 Monitor during simulation execution. Alert thresholds are configurable.
 
+**Standards Reference:** This stage implements solution verification (ASME V&V 10-2006 Section 4.1, ASME V&V 20-2009 Section 5.3) and in-process monitoring (NASA-STD-7009A Section 3.3). See `vv_standards.md` for convergence criteria standards.
+
 ### 2.1 Convergence Monitoring
 
 | Metric | Alert Condition | Likely Cause |
@@ -87,6 +95,8 @@ Monitor during simulation execution. Alert thresholds are configurable.
 
 ### 2.3 Conservation Monitoring
 
+**Standards Reference:** Conservation checks align with ASME V&V 40-2018 Section 6.3 (Model Form Uncertainty) and NASA-STD-7009A Section 4.4 (Uncertainty Quantification). See `vv_standards.md` for validation metric standards.
+
 | Quantity | Alert Condition | Tolerance |
 |----------|-----------------|-----------|
 | Mass | `|M(t) - M(0)| / M(0) > tol` | 1e-6 to 1e-3 |
@@ -108,13 +118,19 @@ Monitor during simulation execution. Alert thresholds are configurable.
 
 Run after simulation completes. Failed checks invalidate results.
 
+**Standards Reference:** This stage implements validation assessment (ASME V&V 20-2009 Section 4.4, ASME V&V 40-2018 Section 5.1) and validation evidence collection (NASA-STD-7009A Section 4.3). See `vv_standards.md` for validation metrics standards.
+
 ### 3.1 Conservation Validation
+
+**Standards Reference:** Conservation checks are fundamental validation metrics per ASME V&V 20-2009 Section 4.4 and NASA-STD-7009A Section 4.2. Model form errors (conservation drift) align with ASME V&V 40-2018 Section 6.3. See `vv_standards.md` for physical consistency validation standards.
 
 | Check | Criteria | Action if Failed |
 |-------|----------|------------------|
 | Mass conserved | Drift < tolerance | Results invalid |
-| Energy behavior | Monotonic if variational | Review physics |
+| Energy behavior | Monotonic decrease for gradient flows and dissipative systems (not all variational formulations) [1] | Review physics |
 | Momentum conserved | Drift < tolerance | Results invalid |
+
+[1] Evans, L.C. (2010). *Partial Differential Equations*, 2nd ed. American Mathematical Society, Section 8.1 (Gradient flows and dissipative systems).
 
 ### 3.2 Field Validation
 
@@ -141,6 +157,8 @@ Run after simulation completes. Failed checks invalidate results.
 
 ### 3.4 Confidence Score Calculation
 
+**Standards Reference:** The confidence score implements credibility assessment per ASME V&V 40-2018 Section 5.1 and NASA-STD-7009A risk-based credibility framework. See `vv_standards.md` for credibility factor mappings.
+
 ```
 confidence = (passed_checks) / (total_checks)
 
@@ -154,6 +172,8 @@ Interpretation:
 ---
 
 ## Validation Documentation
+
+**Standards Reference:** Documentation requirements align with ASME V&V 40-2018 Section 7.2 (Evidence Documentation) and NASA-STD-7009A Section 5 (M&S Documentation). See `vv_standards.md` for standard-compliant documentation guidance and JSON output field mappings.
 
 ### What to Record
 

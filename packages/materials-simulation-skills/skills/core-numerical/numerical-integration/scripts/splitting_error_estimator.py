@@ -28,7 +28,8 @@ def estimate_error(
     dt_effective = dt
     if target_error > 0 and error_est > target_error:
         ratio = error_est / target_error
-        substeps = int(math.ceil(ratio ** (1.0 / (order + 1))))
+        # Exponent is 1/order to correctly account for error accumulation
+        substeps = int(math.ceil(ratio ** (1.0 / order)))
         substeps = max(substeps, 1)
         dt_effective = dt / substeps
         error_est = commutator_norm * (dt_effective ** (order + 1))

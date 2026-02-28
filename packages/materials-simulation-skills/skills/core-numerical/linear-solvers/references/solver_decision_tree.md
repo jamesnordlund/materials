@@ -49,7 +49,8 @@ START: Need to solve Ax = b
     │   │   └── NO/Unknown (symmetric indefinite)
     │   │       ├── Eigenvalues both signs → MINRES
     │   │       ├── Near-singular → SYMMLQ
-    │   │       └── Preconditioner: ILU or block diagonal
+    │   │       └── Preconditioner: SSOR, ICC, or SPD block diagonal
+    │   │           (MINRES requires symmetric positive-definite preconditioner)
     │   │
     │   └── NO (nonsymmetric) → Is it nearly symmetric?
     │       │
@@ -81,10 +82,15 @@ START: Need to solve Ax = b
 | Matrix Type | Method | Complexity |
 |-------------|--------|------------|
 | General dense | LU with pivoting | O(n³) |
-| Symmetric dense | LDLᵀ | O(n³/2) |
+| Symmetric dense | LDLᵀ (Bunch-Kaufman) | O(n³/3) |
 | SPD dense | Cholesky | O(n³/3) |
-| Sparse | Sparse LU (SuperLU, UMFPACK) | O(nnz^α), α ≈ 1.5 |
+| Sparse | Sparse LU (SuperLU, UMFPACK) | Problem-dependent: O(N log N) (2D) to O(N^(4/3)) (3D) for nested dissection |
 | Banded | Band LU/Cholesky | O(n × b²) |
+
+**References:**
+- Golub, G.H. & Van Loan, C.F. (2013). *Matrix Computations*, 4th ed., Section 4.2 (LDL^T factorization complexity: O(n³/3))
+- George, A. & Liu, J.W. (1981). *Computer Solution of Large Sparse Positive Definite Systems*, Prentice-Hall (sparse complexity analysis)
+- Davis, T.A. (2006). *Direct Methods for Sparse Linear Systems*, SIAM (sparse LU complexity ranges)
 
 ### Memory Considerations
 
@@ -274,13 +280,78 @@ Block ILU: Factor with block structure preserved
 4. **Regularize**: Add small diagonal for near-singular
 5. **Reformulate problem**: Different discretization
 
+## GPU-Accelerated Solvers
+
+### When to Use GPU Solvers
+
+GPU solvers provide significant speedup for:
+- Large dense systems (cuSOLVER, cuBLAS)
+- Sparse direct solves (cuDSS, cuSPARSE)
+- Iterative solvers with GPU-friendly preconditioners (AmgX, MAGMA)
+- Batched solves of many small systems (cuBLAS batched)
+
+### NVIDIA CUDA Libraries
+
+| Library | Type | Key Routines | Best For |
+|---------|------|-------------|----------|
+| **cuSOLVER** | Dense & sparse direct | LU, Cholesky, QR, sparse Cholesky | Single large solves |
+| **cuSPARSE** | Sparse operations | SpMV, SpMM, ILU, IC | Building blocks for iterative |
+| **cuDSS** | Sparse direct | Multifrontal LU/Cholesky | Large sparse direct solves |
+| **AmgX** | Algebraic multigrid | AMG-preconditioned Krylov | Elliptic PDE solves at scale |
+| **cuBLAS** | Dense BLAS | GEMM, TRSV, batched operations | Dense kernels, small batched |
+
+### GPU Solver Selection
+
+```
+Is the system dense?
+  YES → cuSOLVER (LU/Cholesky) or cuBLAS for batched small systems
+  NO → Is sparse direct feasible (n < 10⁶)?
+         YES → cuDSS (sparse multifrontal)
+         NO → Iterative on GPU:
+              SPD? → CG + AmgX (AMG preconditioner)
+              General? → GMRES + cuSPARSE ILU/IC + AmgX
+```
+
+### GPU-Friendly Preconditioners
+
+| Preconditioner | GPU Suitability | Notes |
+|---------------|-----------------|-------|
+| Jacobi / Block Jacobi | Excellent | Embarrassingly parallel |
+| Polynomial (Chebyshev) | Excellent | Only needs SpMV |
+| AMG (AmgX) | Very good | Optimized GPU implementation |
+| ILU(0) / IC(0) | Moderate | Level-scheduled parallelism |
+| ILUT | Poor | Inherently sequential; consider block variants |
+
+### ML-Enhanced Preconditioners
+
+Emerging approaches using machine learning for preconditioning:
+
+| Approach | Description | Status (2024) |
+|----------|-------------|---------------|
+| Learned ILU | Train neural network to predict ILU factors | Research |
+| Graph neural network preconditioner | GNN predicts sparsity pattern and values | Research |
+| Neural operator as preconditioner | DeepONet/FNO approximate A⁻¹ | Research |
+| Hybrid AMG-ML | ML-tuned AMG parameters | Early production |
+
+**Note:** ML-enhanced preconditioners are not yet mature for production V&V-critical applications. They show promise for repeated solves with similar matrix structure (e.g., parameter sweeps).
+
+### Practical GPU Considerations
+
+| Factor | Guidance |
+|--------|----------|
+| Data transfer | Minimize CPU↔GPU transfers; keep matrix on GPU across solves |
+| Memory | GPU memory is limited (~16-80 GB); plan for matrix + workspace |
+| Precision | Mixed precision (FP32 solve + FP64 refinement) can 2× throughput |
+| Batched | For many small systems (n < 1000), batched solvers are optimal |
+| Multi-GPU | Needed for very large problems; adds communication complexity |
+
 ## Quick Reference Table
 
 | Matrix Type | First Choice | Preconditioner | Backup |
 |-------------|--------------|----------------|--------|
 | SPD, elliptic | CG | AMG | CG + IC |
 | SPD, general | CG | IC(k) | Cholesky |
-| Sym. indef. | MINRES | Block diag | GMRES |
+| Sym. indef. | MINRES | SPD block diag, SSOR | GMRES |
 | Nonsym., mild | BiCGSTAB | ILUT | GMRES |
 | Nonsym., strong | GMRES(50) | ILU(k) | GMRES(100) |
 | Saddle-point | Block GMRES | Schur approx | Uzawa |

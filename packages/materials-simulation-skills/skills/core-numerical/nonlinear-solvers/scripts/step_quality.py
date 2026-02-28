@@ -15,6 +15,14 @@ def evaluate_step(
 ) -> Dict[str, Any]:
     """Evaluate step quality for trust region management.
 
+    The Cauchy decrease condition requires that the step achieves at least
+    a fraction of the decrease obtained by the Cauchy point:
+        m(0) - m(s_cp) >= (1/2) * ||g|| * min(Delta, ||g||/||B||)
+    where Delta is the trust region radius.
+
+    Reference: Nocedal & Wright (2006), Numerical Optimization,
+    Section 4.1, Eq. 4.5.
+
     Args:
         predicted_reduction: Model-predicted decrease in objective
         actual_reduction: Actual decrease in objective
@@ -110,7 +118,13 @@ def evaluate_step(
         notes.append("Near-zero gradient with rejected step; check for saddle point.")
 
     # Cauchy decrease check: should get at least some fraction of Cauchy decrease
-    cauchy_decrease_expected = gradient_norm * min(step_norm, gradient_norm)
+    # Proper formula: m(0) - m(s_cp) >= (1/2) * ||g|| * min(Delta, ||g||/||B*g||)
+    # Using step_norm as an approximation for the Hessian-scaled gradient
+    if trust_radius is not None:
+        cauchy_decrease_expected = 0.5 * gradient_norm * min(trust_radius, gradient_norm / max(step_norm, 1e-14))
+    else:
+        cauchy_decrease_expected = 0.5 * gradient_norm * min(step_norm, gradient_norm)
+
     if accept_step and actual_reduction < 0.1 * cauchy_decrease_expected and gradient_norm > 1e-10:
         notes.append("Step achieved less than expected Cauchy decrease.")
 

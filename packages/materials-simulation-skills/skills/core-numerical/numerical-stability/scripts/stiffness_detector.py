@@ -41,11 +41,31 @@ def parse_args() -> argparse.Namespace:
 def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
     _, ext = os.path.splitext(path)
     if ext == ".npy":
-        return np.load(path)
+        return np.load(path, allow_pickle=False)
     return np.loadtxt(path, delimiter=delimiter)
 
 
 def compute_stiffness(eigs: np.ndarray, threshold: float) -> Dict[str, object]:
+    """
+    Compute stiffness ratio from eigenvalues using real parts.
+
+    The stiffness ratio is defined as max(|Re(lambda)|) / min(|Re(lambda)|)
+    for eigenvalues with nonzero real parts. This correctly identifies stiffness
+    in systems with significant imaginary eigenvalue components.
+
+    Eigenvalues with zero real part (pure imaginary) are excluded from the
+    stiffness calculation as they do not contribute to stiffness.
+
+    Reference: Hairer & Wanner, "Solving Ordinary Differential Equations II:
+    Stiff and Differential-Algebraic Problems," 2nd ed. (1996), Section IV.2.
+
+    Args:
+        eigs: Array of eigenvalues (may be complex)
+        threshold: Stiffness ratio threshold for classification
+
+    Returns:
+        Dictionary with stiffness_ratio, stiff flag, recommendation, and counts
+    """
     if threshold <= 0:
         raise ValueError("threshold must be positive")
     if eigs.size == 0:
@@ -53,17 +73,29 @@ def compute_stiffness(eigs: np.ndarray, threshold: float) -> Dict[str, object]:
     if not np.all(np.isfinite(eigs)):
         raise ValueError("eigs contain non-finite values")
 
-    abs_eigs = np.abs(eigs)
-    nonzero = abs_eigs[abs_eigs > 0]
-    ratio = float(np.max(nonzero) / np.min(nonzero)) if nonzero.size else float("inf")
-    stiff = ratio >= threshold
-    recommendation = "implicit (BDF/Radau)" if stiff else "explicit (RK/Adams)"
+    # Use real parts of eigenvalues, not modulus
+    real_parts = np.real(eigs)
+    abs_real = np.abs(real_parts)
+
+    # Exclude eigenvalues with zero real part (pure imaginary)
+    nonzero_real = abs_real[abs_real > 0]
+
+    if nonzero_real.size == 0:
+        # All eigenvalues are pure imaginary (zero real part)
+        # Oscillatory systems without damping are not stiff by typical definitions
+        ratio = None
+        stiff = False
+        recommendation = "P-stable or symplectic method (oscillatory system)"
+    else:
+        ratio = float(np.max(nonzero_real) / np.min(nonzero_real))
+        stiff = ratio >= threshold
+        recommendation = "implicit (BDF/Radau)" if stiff else "explicit (RK/Adams)"
 
     return {
         "stiffness_ratio": ratio,
         "stiff": stiff,
         "recommendation": recommendation,
-        "nonzero_count": int(nonzero.size),
+        "nonzero_count": int(nonzero_real.size),
         "total_count": int(eigs.size),
     }
 
@@ -102,7 +134,8 @@ def main() -> None:
         return
 
     print("Stiffness detection")
-    print(f"  stiffness ratio: {results['stiffness_ratio']:.6g}")
+    sr = results["stiffness_ratio"]
+    print(f"  stiffness ratio: {sr:.6g}" if sr is not None else "  stiffness ratio: N/A")
     print(f"  stiff: {results['stiff']}")
     print(f"  recommendation: {results['recommendation']}")
 

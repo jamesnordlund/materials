@@ -182,10 +182,12 @@ python3 scripts/result_aggregator.py \
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `Base config not found` | Invalid file path | Verify base config file exists |
-| `Invalid parameter format` | Malformed param string | Use format `name:min:max:count` or `name:min:max` |
-| `Output directory exists` | Would overwrite | Use `--force` or choose new directory |
-| `No completed jobs` | No results to aggregate | Wait for jobs to complete or check for failures |
-| `Metric not found` | Result files missing field | Verify metric name in result JSON |
+| `Invalid param spec` | Malformed param string | Use format `name:min:max:count` or `name:min:max` |
+| `Output directory exists. Use --force to overwrite.` | Directory exists without force flag | Use `--force` or choose new directory |
+| `No parameters specified` | Empty params string | Provide at least one parameter |
+| `Grid method requires count for parameter` | Missing count in grid mode | Add count to parameter spec (e.g., `dt:1e-4:1e-2:5`) |
+| `Linspace method requires count for parameter` | Missing count in linspace mode | Add count to parameter spec |
+| `Unknown method` | Invalid sweep method | Use `grid`, `linspace`, or `lhs` |
 
 ## Integration with Other Skills
 

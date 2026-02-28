@@ -23,8 +23,8 @@ This document catalogs common log patterns that indicate simulation issues. Use 
 
 | Pattern | Regex | Meaning |
 |---------|-------|---------|
-| NaN appeared | `nan\|NaN\|NAN` | Not a Number in computation |
-| Infinity | `inf\|Inf\|INF` | Overflow to infinity |
+| NaN appeared | `\bnan\b\|\bNaN\b\|\bNAN\b` | Not a Number in computation |
+| Infinity | `\binf\b\|\bInf\b\|\bINF\b` | Overflow to infinity |
 | Overflow | `overflow\|Overflow` | Numeric overflow |
 | Underflow | `underflow\|Underflow` | Numeric underflow (usually okay) |
 
@@ -38,7 +38,9 @@ Solution overflow at t = 0.0234
 **Regex for Detection:**
 ```python
 import re
-nan_inf_pattern = re.compile(r'\b(nan|inf|overflow)\b', re.IGNORECASE)
+# Word boundaries prevent false matches in "info", "nanoparticle", "configuration"
+nan_inf_pattern = re.compile(r'\b(nan|inf)\b', re.IGNORECASE)
+overflow_pattern = re.compile(r'overflow', re.IGNORECASE)
 ```
 
 ### Divergence Indicators
@@ -240,7 +242,7 @@ import re
 from typing import List, Tuple
 
 PATTERNS = [
-    (re.compile(r'nan|inf|overflow', re.I), 'Numerical blow-up', 'FATAL'),
+    (re.compile(r'\b(nan|inf)\b|overflow', re.I), 'Numerical blow-up', 'FATAL'),
     (re.compile(r'diverg|explo', re.I), 'Divergence', 'CRITICAL'),
     (re.compile(r'out of memory|oom|bad_alloc', re.I), 'Memory exhaustion', 'FATAL'),
     (re.compile(r'disk.{0,10}full|no space', re.I), 'Disk full', 'FATAL'),

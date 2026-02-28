@@ -12,7 +12,7 @@ Provide a three-stage validation protocol: pre-flight checks, runtime monitoring
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - No external dependencies (uses Python standard library only)
 - Works on Linux, macOS, and Windows
 
@@ -34,7 +34,9 @@ Before running validation scripts, collect from the user:
 
 ```
 Is simulation about to start?
-├── YES → Run Stage 1: preflight_checker.py
+├── YES → Run Stage 1: preflight_checker.py (validates parameters, ranges, disk space)
+│         └── **Note**: Numerical stability checks (CFL, Fourier) are NOT automatic in Stage 1.
+│         └──         Please perform manual stability checks using numerical-stability skill.
 │         └── BLOCK status? → Fix issues, do NOT run simulation
 │         └── WARN status? → Review warnings, document if accepted
 │         └── PASS status? → Proceed to run simulation
@@ -145,10 +147,12 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `Config not found` | File path invalid | Verify config path exists |
-| `Non-numeric value` | Parameter is not a number | Fix config file format |
-| `out of range` | Parameter outside bounds | Adjust parameter or bounds |
+| `Non-numeric value for {key}` | Parameter is not a number | Fix config file format |
+| `{key} out of range [{min}, {max}]` | Parameter outside bounds | Adjust parameter or bounds |
 | `Output directory not writable` | Permission issue | Check directory permissions |
-| `Insufficient disk space` | Disk nearly full | Free up space or reduce output |
+| `Insufficient disk space` | Disk nearly full (below min-free-gb) | Free up space or reduce output |
+| `Missing required parameter` | Required parameter not in config | Add missing parameter to config |
+| `range entries must be name:min:max` | Malformed range specification | Use correct format: `dt:1e-6:1e-2` |
 
 ## Interpretation Guidance
 

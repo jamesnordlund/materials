@@ -69,12 +69,19 @@ x_{k+1} = x_k - J(x_m)^{-1} f(x_k)   (recompute every m steps)
 ```
 
 **Forcing sequence η_k:**
+
+Per Eisenstat & Walker (1996), two practical choices are:
+
 | Choice | η_k | Convergence |
 |--------|-----|-------------|
 | Constant | η = 0.1 | Linear |
-| Type 1 | min(0.5, ||f_k||) | Superlinear |
-| Type 2 | min(0.5, ||f_k||/||f_{k-1}||) | Quadratic (if appropriate) |
-| Eisenstat-Walker | Safeguarded version | Practical choice |
+| EW Choice 1 | \|\\|f_k\\| - \\|J_{k-1} s_{k-1} + f_{k-1}\\|\| / \\|f_{k-1}\\| | Superlinear |
+| EW Choice 2 | γ (\\|f_k\\| / \\|f_{k-1}\\|)^α, with γ ∈ (0,1], α ∈ (1,2] | Superlinear to quadratic |
+
+For Choice 1, safeguard with η_k ≤ η_max (e.g., 0.9) and η_k ≥ η_min (e.g., 10^-4).
+For Choice 2, typical values are γ = 0.9, α = 2 (quadratic), with the same safeguards.
+
+*Citation: Eisenstat, S.C. & Walker, H.F. (1996). Choosing the forcing terms in an inexact Newton method. SIAM Journal on Scientific Computing, 17(1), 16-32.*
 
 **When to use:**
 - Large problems where exact solve too expensive
@@ -99,11 +106,17 @@ x_{k+1} = x_k - J(x_m)^{-1} f(x_k)   (recompute every m steps)
 | max_krylov | 30-100 | GMRES restart for memory |
 | preconditioner | ILU, AMG | Critical for performance |
 
-**Jacobian-free variant:**
+**Jacobian-free variant (JFNK):**
 ```
 J(x) v ≈ (f(x + εv) - f(x)) / ε
 ```
-where ε ≈ √(machine_eps) × ||x|| / ||v||
+where the perturbation parameter is chosen as (Knoll & Keyes 2004, Eq. 6):
+```
+ε = √(eps_mach) × (1 + ||x||) / ||v||
+```
+This choice balances truncation error and roundoff error.
+
+*Citation: Knoll, D.A. & Keyes, D.E. (2004). Jacobian-free Newton–Krylov methods: a survey of approaches and applications. Journal of Computational Physics, 193(2), 357-397.*
 
 **When to use:**
 - Large-scale problems (n > 10000)
@@ -244,9 +257,11 @@ x_{k+1} = g(x_k)
 | regularization | 1e-10 | For least-squares solve |
 
 **Properties:**
-- Transforms linear convergence to superlinear (often)
+- Can improve the linear convergence rate of fixed-point iteration (Evans et al. 2020)
 - Robust when simple acceleration fails
 - Works well for multiphysics coupling
+
+*Citation: Evans, C., Pollock, S., Rebholz, L.G., & Xiao, M. (2020). A proof that Anderson acceleration improves the convergence rate in linearly converging fixed-point methods (but not in those converging quadratically). SIAM Journal on Numerical Analysis, 58(1), 788-810.*
 
 **When to use:**
 - Accelerating Picard iteration
@@ -374,3 +389,33 @@ J^T J δ = -J^T r
 | η_2 | 0.9 | 0.75 |
 | γ_1 | 0.25 | 0.5 |
 | γ_2 | 2.5 | 2.0 |
+
+## Emerging Methods
+
+### Physics-Informed Neural Network (PINN) Hybrid Methods
+
+PINNs embed PDE residuals into neural network loss functions, providing an alternative or complement to classical nonlinear solvers. Hybrid approaches combine PINN with traditional methods.
+
+**Approaches:**
+
+| Hybrid Strategy | Description | Benefit |
+|----------------|-------------|---------|
+| PINN warm-start | Train PINN to get initial guess, then Newton polish | Reduces Newton iterations by 50-80% for expensive problems |
+| Neural operator preconditioner | Use neural operator (DeepONet, FNO) as approximate inverse | Mesh-independent preconditioning |
+| PINN surrogate solver | Replace costly inner solves with trained network | Orders-of-magnitude speedup at inference |
+
+**When to consider:**
+- Very expensive function evaluations (minutes to hours per solve)
+- Repeated solves with varying parameters (parameter continuation)
+- Problems where classical methods require many globalization restarts
+
+**Limitations:**
+- Training cost may exceed classical solve for one-off problems
+- Accuracy guarantees weaker than Newton convergence theory
+- Requires representative training data or physics-informed loss
+
+**Maturity:** Research-stage (2024-2026). Not yet recommended for production V&V-critical simulations, but promising for design exploration and rapid prototyping.
+
+**References:**
+- Raissi, M., Perdikaris, P., & Karniadakis, G.E. (2019). Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear PDEs. *J. Comput. Phys.*, 378, 686-707.
+- Lu, L., Jin, P., Pang, G., Zhang, Z., & Karniadakis, G.E. (2021). Learning nonlinear operators via DeepONet. *Nature Machine Intelligence*, 3, 218-229.

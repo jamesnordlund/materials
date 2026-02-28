@@ -11,6 +11,7 @@ def compute_interval(
     checkpoint_cost: float,
     max_lost_time: float,
     mtbf: Optional[float],
+    formula: str = "young",
 ) -> Dict[str, object]:
     if run_time <= 0:
         raise ValueError("run_time must be positive")
@@ -20,10 +21,22 @@ def compute_interval(
         raise ValueError("max_lost_time must be positive")
     if mtbf is not None and mtbf <= 0:
         raise ValueError("mtbf must be positive")
+    if mtbf is not None and formula == "daly" and mtbf <= checkpoint_cost:
+        raise ValueError(
+            "mtbf must be greater than checkpoint_cost for the Daly formula"
+        )
+    if formula not in {"young", "daly"}:
+        raise ValueError("formula must be 'young' or 'daly'")
 
     if mtbf is not None:
-        interval = math.sqrt(2.0 * mtbf * checkpoint_cost)
-        method = "daly"
+        if formula == "young":
+            # Young (1974): τ = sqrt(2 × δ × MTBF)
+            interval = math.sqrt(2.0 * checkpoint_cost * mtbf)
+        else:  # daly
+            # Daly (2006): τ = sqrt(2 × δ × (MTBF - δ)) + δ
+            # Accounts for restart overhead
+            interval = math.sqrt(2.0 * checkpoint_cost * (mtbf - checkpoint_cost)) + checkpoint_cost
+        method = formula
     else:
         interval = max_lost_time
         method = "cap"
@@ -64,6 +77,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Mean time between failures (s)",
     )
+    parser.add_argument(
+        "--formula",
+        choices=["young", "daly"],
+        default="young",
+        help="Checkpoint formula: Young (1974) or Daly (2006) refinement",
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     return parser.parse_args()
 
@@ -76,6 +95,7 @@ def main() -> None:
             checkpoint_cost=args.checkpoint_cost,
             max_lost_time=args.max_lost_time,
             mtbf=args.mtbf,
+            formula=args.formula,
         )
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
@@ -87,6 +107,7 @@ def main() -> None:
             "checkpoint_cost": args.checkpoint_cost,
             "max_lost_time": args.max_lost_time,
             "mtbf": args.mtbf,
+            "formula": args.formula,
         },
         "results": result,
     }

@@ -12,9 +12,9 @@ Provide a repeatable checklist and script-driven checks to keep time-dependent s
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for matrix_condition.py and von_neumann_analyzer.py)
-- See `scripts/requirements.txt` for dependencies
+- See `pyproject.toml` at the package root for dependency versions
 
 ## Inputs to Gather
 
@@ -47,7 +47,7 @@ Is the problem stiff (fast + slow dynamics)?
 |---------|--------|---------------------|---------|
 | Advection | CFL | C ≤ 1 | `C = v·dt/dx` |
 | Diffusion | Fourier | Fo ≤ 0.5 | `Fo = D·dt/dx²` |
-| Reaction | Reaction | R ≤ 1 | `R = k·dt` |
+| Reaction | Reaction | R ≤ 2 (stability), R ≤ 1 (monotonicity, default) | `R = k·dt` |
 
 **Multi-dimensional correction**: For d dimensions, diffusion limit is `Fo ≤ 1/(2d)`.
 
@@ -80,12 +80,14 @@ Is the problem stiff (fast + slow dynamics)?
    python3 scripts/cfl_checker.py --dx 0.01 --dt 1e-4 --diffusivity 1e-3 --dimensions 2 --json
    ```
 2. Interpret results:
-   - Fourier number: `Fo = 1e-3 × 1e-4 / (0.01)² = 1.0`
+   - Fourier number: `Fo = 1e-3 × 1e-4 / (0.01)² = 1e-3`
    - 2D limit: `Fo ≤ 0.25`
-   - **Violation**: Fo = 1.0 > 0.25, unstable!
-3. Recommend fix:
-   - Reduce dt to `2.5e-5` (to get Fo = 0.25)
-   - Or increase dx, or switch to implicit
+   - **No violation**: Fo = 0.001 < 0.25, stability condition is satisfied.
+   - Blow-up is likely caused by something other than the diffusion CFL limit (e.g., nonlinear terms, boundary conditions, or coupling).
+3. Recommend investigation:
+   - Check for other physics (advection, reaction) that may impose tighter limits
+   - Verify boundary conditions and coupling terms
+   - If problem includes additional fast dynamics, run full stiffness check
 
 ## Pre-Simulation Stability Checklist
 
@@ -133,9 +135,9 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 
 ## Limitations
 
-- **Explicit schemes only** for CFL/Fourier checks (implicit is unconditionally stable)
+- **Explicit schemes only** for CFL/Fourier checks (implicit schemes do not have the same CFL restrictions, but may still require accuracy-based time step selection)
 - **Von Neumann analysis** assumes linear, constant-coefficient, periodic BCs
-- **Stiffness detection** requires eigenvalue estimates from user
+- **Stiffness detection** requires eigenvalue estimates from user; purely imaginary eigenvalues do not indicate stiffness
 
 ## References
 

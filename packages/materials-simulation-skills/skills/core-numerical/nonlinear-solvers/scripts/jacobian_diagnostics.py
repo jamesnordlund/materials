@@ -2,27 +2,40 @@
 """Analyze Jacobian matrix quality for nonlinear solvers."""
 import argparse
 import json
+import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
+import scipy.io
+import scipy.sparse
+import scipy.sparse.linalg
+
+# Enable import of shared utilities from skills/_shared/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+from _shared._matrix_io import load_matrix  # noqa: E402
 
 
 def diagnose_jacobian(
-    matrix: np.ndarray,
-    finite_diff_matrix: Optional[np.ndarray] = None,
+    matrix: Union[np.ndarray, scipy.sparse.spmatrix],
+    finite_diff_matrix: Optional[Union[np.ndarray, scipy.sparse.spmatrix]] = None,
     tolerance: float = 1e-6,
 ) -> Dict[str, Any]:
     """Analyze Jacobian matrix quality.
 
+    Supports both dense numpy arrays and sparse scipy matrices.
+    For sparse matrices, uses scipy.sparse.linalg.svds for singular value computation.
+
     Args:
-        matrix: The Jacobian matrix to analyze
+        matrix: The Jacobian matrix to analyze (dense or sparse)
         finite_diff_matrix: Optional finite-difference approximation for comparison
         tolerance: Tolerance for rank deficiency detection
 
     Returns:
         Dictionary with Jacobian diagnostics
     """
+    is_sparse = scipy.sparse.issparse(matrix)
+
     if matrix.ndim != 2:
         raise ValueError("matrix must be 2-dimensional")
 
@@ -35,10 +48,27 @@ def diagnose_jacobian(
     m, n = matrix.shape
     notes: List[str] = []
 
+    if is_sparse:
+        notes.append(f"Sparse Jacobian detected (nnz={matrix.nnz}, density={matrix.nnz/(m*n):.4g}).")
+
     # Compute SVD for condition number and rank analysis
     try:
-        singular_values = np.linalg.svd(matrix, compute_uv=False)
-    except np.linalg.LinAlgError:
+        if is_sparse:
+            # For sparse matrices, use svds to compute largest and smallest singular values
+            k = min(6, min(m, n) - 2) if min(m, n) > 7 else max(1, min(m, n) - 2)
+            if k < 1:
+                # Matrix too small for svds, convert to dense
+                singular_values = np.linalg.svd(matrix.toarray(), compute_uv=False)
+            else:
+                # Compute largest and smallest singular values
+                s_max = scipy.sparse.linalg.svds(matrix, k=k, which='LM', return_singular_vectors=False)
+                s_min = scipy.sparse.linalg.svds(matrix, k=k, which='SM', return_singular_vectors=False)
+                # Combine and sort
+                singular_values = np.sort(np.concatenate([s_max, s_min]))[::-1]
+        else:
+            # Dense case (original behavior)
+            singular_values = np.linalg.svd(matrix, compute_uv=False)
+    except (np.linalg.LinAlgError, scipy.sparse.linalg.ArpackNoConvergence, scipy.sparse.linalg.ArpackError):
         return {
             "shape": [m, n],
             "condition_number": float("inf"),
@@ -48,6 +78,7 @@ def diagnose_jacobian(
             "singular_value_max": 0.0,
             "jacobian_quality": "singular",
             "finite_diff_error": None,
+            "is_sparse": is_sparse,
             "notes": ["SVD computation failed; matrix may be ill-formed."],
         }
 
@@ -88,8 +119,28 @@ def diagnose_jacobian(
         if finite_diff_matrix.shape != matrix.shape:
             notes.append("Finite-diff matrix shape mismatch; skipping comparison.")
         else:
-            diff = matrix - finite_diff_matrix
-            relative_error = np.linalg.norm(diff) / (np.linalg.norm(matrix) + 1e-30)
+            # Compute difference using sparse operations if applicable
+            if is_sparse or scipy.sparse.issparse(finite_diff_matrix):
+                # Use sparse norm computation
+                if is_sparse and scipy.sparse.issparse(finite_diff_matrix):
+                    diff = matrix - finite_diff_matrix
+                    diff_norm = scipy.sparse.linalg.norm(diff)
+                    matrix_norm = scipy.sparse.linalg.norm(matrix)
+                elif is_sparse:
+                    # matrix is sparse, finite_diff_matrix is dense
+                    diff_norm = np.linalg.norm((matrix - finite_diff_matrix).toarray())
+                    matrix_norm = scipy.sparse.linalg.norm(matrix)
+                else:
+                    # matrix is dense, finite_diff_matrix is sparse
+                    diff_norm = np.linalg.norm(matrix - finite_diff_matrix.toarray())
+                    matrix_norm = np.linalg.norm(matrix)
+            else:
+                # Both dense
+                diff = matrix - finite_diff_matrix
+                diff_norm = np.linalg.norm(diff)
+                matrix_norm = np.linalg.norm(matrix)
+
+            relative_error = diff_norm / (matrix_norm + 1e-30)
             finite_diff_error = float(relative_error)
 
             if relative_error > 0.1:
@@ -108,16 +159,10 @@ def diagnose_jacobian(
         "singular_value_max": sv_max,
         "jacobian_quality": jacobian_quality,
         "finite_diff_error": finite_diff_error,
+        "is_sparse": is_sparse,
         "notes": notes,
     }
 
-
-def load_matrix(path: str) -> np.ndarray:
-    """Load matrix from text file."""
-    try:
-        return np.loadtxt(path)
-    except Exception as e:
-        raise ValueError(f"Failed to load matrix from {path}: {e}")
 
 
 def parse_args() -> argparse.Namespace:

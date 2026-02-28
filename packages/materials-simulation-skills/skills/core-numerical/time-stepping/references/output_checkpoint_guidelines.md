@@ -63,7 +63,7 @@ def should_output(t, t_last, solution):
 
 ### Optimal Checkpoint Interval
 
-**Daly's Formula** (minimize total time with failures):
+**Young's Formula** (minimize total time with failures; Young 1974):
 
 ```
 τ_checkpoint = sqrt(2 × δ × MTBF)
@@ -81,11 +81,15 @@ MTBF = 24 hours = 1440 minutes
 τ_checkpoint = sqrt(2 × 2 × 1440) = 76 minutes
 ```
 
-**Young's Refinement** (accounts for restart overhead):
+**Daly's Refinement** (accounts for restart overhead; Daly 2006):
 
 ```
 τ_checkpoint = sqrt(2 × δ × (MTBF - δ)) + δ
 ```
+
+**References:**
+- Young, J.W. (1974). "A first order approximation to the optimum checkpoint interval." Communications of the ACM, 17(9), 530-531.
+- Daly, J.T. (2006). "A higher order estimate of the optimum checkpoint interval for restart dumps." Future Generation Computer Systems, 22(3), 303-312.
 
 ### Practical Guidelines
 

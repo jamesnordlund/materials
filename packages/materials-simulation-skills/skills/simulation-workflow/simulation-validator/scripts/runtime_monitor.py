@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import re
 import sys
 from typing import Dict, List, Optional, Tuple
@@ -20,7 +21,8 @@ def parse_log(
         res_match = res_re.search(line)
         if res_match:
             try:
-                residuals.append(float(res_match.group(1)))
+                val = float(res_match.group(1))
+                residuals.append(val)
             except ValueError:
                 continue
         dt_match = dt_re.search(line)
@@ -46,7 +48,16 @@ def monitor(
 ) -> Dict[str, object]:
     alerts: List[str] = []
     if residuals:
+        # Check for NaN residuals first (indicates numerical breakdown)
+        for i, res in enumerate(residuals):
+            if math.isnan(res):
+                alerts.append(f"NaN residual detected at index {i} (anomalous).")
+                break
+        # Check for residual growth
         for i in range(1, len(residuals)):
+            # Skip NaN comparisons
+            if math.isnan(residuals[i - 1]) or math.isnan(residuals[i]):
+                continue
             if residuals[i - 1] > 0 and residuals[i] / residuals[i - 1] > residual_growth:
                 alerts.append("Residual increased > threshold.")
                 break

@@ -5,6 +5,9 @@ import random
 import sys
 from typing import Dict, List
 
+import numpy as np
+from scipy.stats import qmc
+
 
 def lhs_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
     rng = random.Random(seed)
@@ -20,11 +23,38 @@ def lhs_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
     return samples
 
 
-def quasi_random_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
-    """Generate quasi-random samples using additive recurrence.
+def sobol_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
+    """Generate Sobol quasi-random samples using scipy.stats.qmc.Sobol.
 
-    Note: This is a simplified quasi-random sequence, not a true Sobol sequence.
-    For production use, consider scipy.stats.qmc.Sobol for actual Sobol sequences.
+    Sobol sequences require a power-of-2 number of samples for optimal properties.
+    This function generates the next power of 2 >= budget, then truncates.
+
+    Reference: Sobol, I. M. (1967). "On the distribution of points in a cube and
+    the approximate evaluation of integrals." USSR Computational Mathematics and
+    Mathematical Physics 7(4): 86–112.
+    """
+    # Compute next power of 2 >= budget
+    n_pow2 = 1
+    while n_pow2 < budget:
+        n_pow2 *= 2
+
+    # Generate scrambled Sobol sequence with seed
+    sampler = qmc.Sobol(d=dim, scramble=True, seed=seed)
+    samples_array = sampler.random(n=n_pow2)
+
+    # Truncate to requested budget
+    samples_array = samples_array[:budget]
+
+    # Convert to list of lists
+    return samples_array.tolist()
+
+
+def r_sequence_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
+    """Generate R-sequence samples using additive recurrence (golden ratio).
+
+    This is a simplified quasi-random sequence based on the golden ratio.
+    Not as high-quality as Sobol, but useful for comparison or when
+    Sobol's power-of-2 constraint is problematic.
     """
     rng = random.Random(seed)
     # Use golden ratio based quasi-random for better uniformity than pure random
@@ -53,15 +83,18 @@ def generate_doe(dim: int, budget: int, method: str, seed: int) -> Dict[str, obj
         raise ValueError("params must be positive")
     if budget <= 0:
         raise ValueError("budget must be positive")
-    valid_methods = {"lhs", "sobol", "quasi-random", "factorial"}
+    valid_methods = {"lhs", "sobol", "r-sequence", "factorial"}
     if method not in valid_methods:
         raise ValueError(f"method must be one of: {', '.join(sorted(valid_methods))}")
 
     if method == "lhs":
         samples = lhs_samples(dim, budget, seed)
-    elif method in {"sobol", "quasi-random"}:
-        # Note: "sobol" is kept for backward compatibility but uses quasi-random
-        samples = quasi_random_samples(dim, budget, seed)
+    elif method == "sobol":
+        # Use actual Sobol sequences via scipy.stats.qmc
+        samples = sobol_samples(dim, budget, seed)
+    elif method == "r-sequence":
+        # Golden-ratio additive recurrence sequence
+        samples = r_sequence_samples(dim, budget, seed)
     else:
         samples = factorial_samples(dim, budget)
 
@@ -81,9 +114,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--budget", type=int, required=True, help="Sample budget")
     parser.add_argument(
         "--method",
-        choices=["lhs", "sobol", "quasi-random", "factorial"],
+        choices=["lhs", "sobol", "r-sequence", "factorial"],
         default="lhs",
-        help="DOE method (sobol uses quasi-random sequence)",
+        help="DOE method (sobol uses scipy Sobol sequences)",
     )
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument("--json", action="store_true", help="Emit JSON output")

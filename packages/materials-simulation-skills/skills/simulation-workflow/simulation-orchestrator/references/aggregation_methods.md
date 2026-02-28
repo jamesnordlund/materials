@@ -120,6 +120,7 @@ result = rbf(new_points)
 Provides uncertainty estimates:
 
 ```python
+# Requires: scikit-learn (optional dependency)
 from sklearn.gaussian_process import GaussianProcessRegressor
 
 gp = GaussianProcessRegressor()

@@ -78,10 +78,12 @@ Semi-implicit BDF combines BDF for stiff with Adams-Bashforth for non-stiff:
 
 | Order | Stability | Startup | Memory |
 |-------|-----------|---------|--------|
-| SBDF1 | A-stable | None | 1 level |
-| SBDF2 | A-stable | RK2 | 2 levels |
-| SBDF3 | A(86°)-stable | RK3 | 3 levels |
-| SBDF4 | A(73°)-stable | RK4 | 4 levels |
+| SBDF1 | A-stable (implicit BDF portion only) | None | 1 level |
+| SBDF2 | A-stable (implicit BDF portion only)* | RK2 | 2 levels |
+| SBDF3 | A(86°)-stable (implicit BDF portion only) | RK3 | 3 levels |
+| SBDF4 | A(73°)-stable (implicit BDF portion only) | RK4 | 4 levels |
+
+**Note:** The stability properties listed refer to the implicit BDF portion of the scheme only, NOT the full IMEX scheme. In particular, SBDF2 is NOT A-stable as a full IMEX scheme when explicit and implicit eigenvalues are both present. The full stability region depends on the coupling between explicit and implicit parts. See Ascher, Ruuth & Wetton (1995), "Implicit-Explicit Methods for Time-Dependent Partial Differential Equations," SIAM J. Numer. Anal. 32(3), 797-823.
 
 ### IMEX-Peer Methods
 

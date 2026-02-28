@@ -194,16 +194,21 @@ Residual:
 ### CG (Conjugate Gradient)
 
 **Expected behavior:**
-- Monotonic residual decrease
+- Monotonic decrease in the A-norm (energy norm): ||e_k||_A is monotonically decreasing
+- The residual 2-norm ||r_k||_2 is NOT necessarily monotonic (Trefethen & Bau 1997, Lecture 38)
 - At most n iterations for exact arithmetic
 - Affected by eigenvalue distribution
 
 **Warning signs:**
 | Observation | Likely Problem |
 |-------------|----------------|
-| Non-monotonic | Matrix not SPD |
+| Non-monotonic A-norm | Matrix not SPD |
 | Very slow | High condition number |
 | Breakdown (0 division) | Indefinite matrix |
+
+**References:**
+- Hestenes, M.R. & Stiefel, E. (1952). Methods of conjugate gradients for solving linear systems. *Journal of Research of the National Bureau of Standards*, 49(6), 409-436.
+- Trefethen, L.N. & Bau, D. (1997). *Numerical Linear Algebra*, SIAM, Lecture 38.
 
 ### GMRES
 
@@ -410,6 +415,7 @@ class ConvergenceMonitor:
 
     def plot(self):
         """Plot convergence history."""
+        # Requires: matplotlib (optional dependency)
         import matplotlib.pyplot as plt
         plt.semilogy(self.residuals, 'b-o')
         plt.xlabel('Iteration')

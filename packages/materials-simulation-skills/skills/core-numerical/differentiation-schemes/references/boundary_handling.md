@@ -68,6 +68,8 @@ Ghost cells: x = -dx, -2dx (left), x = n*dx, (n+1)*dx (right)
 Now central stencils work at all interior points!
 ```
 
+**Grid Convention:** Throughout this document, we use the **interior points convention**: the grid array `f` contains values at interior points only (including boundary points if they are part of the solution domain). Boundary points at x = 0 and x = L are part of the physical grid (indices 0 and n-1). Ghost cells are additional fictitious points outside the domain that are computed from boundary conditions to enable stencil application.
+
 ### Filling Ghost Cells
 
 The ghost values must be computed from boundary conditions.
@@ -104,26 +106,36 @@ f((n+1)*dx) = f(dx)
 ### Ghost Cell Implementation
 
 ```python
-def fill_ghosts(f, bc_type, bc_value, n_ghost):
-    """Fill ghost cells based on boundary condition."""
+def fill_ghosts(f, bc_type, bc_value, n_ghost, dx):
+    """Fill ghost cells based on boundary condition.
+
+    Parameters:
+        f: Array of interior values
+        bc_type: 'dirichlet', 'neumann', or 'periodic'
+        bc_value: Boundary values [left, right] for Dirichlet or Neumann
+        n_ghost: Number of ghost cells on each side
+        dx: Grid spacing (required for Neumann BC extrapolation)
+    """
     f_ext = np.zeros(len(f) + 2 * n_ghost)
     f_ext[n_ghost:-n_ghost] = f
 
     if bc_type == 'dirichlet':
         # Left: reflect through boundary value
+        # f(-dx) = 2*g - f(dx), f(-2dx) = 2*g - f(2dx), etc.
         for i in range(n_ghost):
-            f_ext[n_ghost - 1 - i] = 2 * bc_value[0] - f[i]
+            f_ext[n_ghost - 1 - i] = 2 * bc_value[0] - f[i + 1]
         # Right: reflect through boundary value
         for i in range(n_ghost):
-            f_ext[-n_ghost + i] = 2 * bc_value[1] - f[-1 - i]
+            f_ext[-n_ghost + i] = 2 * bc_value[1] - f[-2 - i]
 
     elif bc_type == 'neumann':
         # Left: extrapolate with derivative
+        # f(-dx) = f(dx) - 2*dx*h, etc.
         for i in range(n_ghost):
-            f_ext[n_ghost - 1 - i] = f[i] - 2 * (i + 1) * dx * bc_value[0]
+            f_ext[n_ghost - 1 - i] = f[i + 1] - 2 * (i + 1) * dx * bc_value[0]
         # Right: extrapolate with derivative
         for i in range(n_ghost):
-            f_ext[-n_ghost + i] = f[-1 - i] + 2 * (i + 1) * dx * bc_value[1]
+            f_ext[-n_ghost + i] = f[-2 - i] + 2 * (i + 1) * dx * bc_value[1]
 
     elif bc_type == 'periodic':
         f_ext[:n_ghost] = f[-n_ghost:]
@@ -260,6 +272,12 @@ If dx varies:
 
 ```python
 class BoundaryCondition:
+    """Base class for boundary condition application.
+
+    Applies boundary conditions to grid array f where f[0] is the left
+    boundary point and f[-1] is the right boundary point (interior points
+    convention as defined above).
+    """
     def apply(self, f, dx):
         raise NotImplementedError
 
@@ -268,15 +286,17 @@ class DirichletBC(BoundaryCondition):
         self.value = value
 
     def apply(self, f, dx):
-        f[0] = self.value  # Direct enforcement
+        f[0] = self.value  # Direct enforcement at boundary point
 
 class NeumannBC(BoundaryCondition):
     def __init__(self, gradient):
         self.gradient = gradient
 
     def apply(self, f, dx):
-        # Second-order one-sided
-        f[0] = f[1] - dx * self.gradient
+        # Second-order one-sided derivative at boundary point
+        # Formula: (-3*f[0] + 4*f[1] - f[2]) / (2*dx) = gradient
+        # Solve for f[0]: f[0] = (4*f[1] - f[2] - 2*dx*gradient) / 3
+        f[0] = (4 * f[1] - f[2] - 2 * dx * self.gradient) / 3
 ```
 
 ### Matrix Form for Implicit
@@ -290,9 +310,13 @@ Dirichlet at i = 0:
   b[0] = g
 
 Neumann at i = 0 (2nd order):
-  A[0, 0] = -1/dx
-  A[0, 1] = 1/dx
-  b[0] = h
+  A[0, 0] = -3/(2*dx)
+  A[0, 1] = 4/(2*dx)
+  A[0, 2] = -1/(2*dx)
+  b[0] = g
+
+  Using 2nd-order one-sided formula: (-3f[0] + 4f[1] - f[2])/(2*dx) = g
+  Reference: LeVeque, R. J. "Finite Difference Methods for Ordinary and Partial Differential Equations: Steady-State and Time-Dependent Problems," SIAM (2007), Ch. 1
 ```
 
 ## Verification

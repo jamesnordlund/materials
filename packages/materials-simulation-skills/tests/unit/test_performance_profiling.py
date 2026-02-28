@@ -4,10 +4,10 @@ Unit tests for Performance Profiling Skill scripts.
 """
 import json
 import os
-import sys
 import tempfile
 import unittest
-from pathlib import Path
+
+from tests.unit._utils import load_module
 
 try:
     from hypothesis import given, strategies as st, settings
@@ -22,9 +22,7 @@ except ImportError:
     settings = lambda **kwargs: lambda func: func
     st = None
 
-# Add scripts directory to path
-REPO_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(REPO_ROOT / 'skills' / 'simulation-workflow' / 'performance-profiling' / 'scripts'))
+_SCRIPTS = "skills/simulation-workflow/performance-profiling/scripts/"
 
 
 class TestTimingAnalyzer(unittest.TestCase):
@@ -32,9 +30,8 @@ class TestTimingAnalyzer(unittest.TestCase):
     
     def setUp(self):
         """Import timing_analyzer module"""
-        import timing_analyzer
-        self.module = timing_analyzer
-    
+        self.module = load_module("timing_analyzer", _SCRIPTS + "timing_analyzer.py")
+
     def test_parse_empty_log(self):
         """Test parsing an empty log file"""
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
@@ -132,9 +129,8 @@ class TestScalingAnalyzer(unittest.TestCase):
     
     def setUp(self):
         """Import scaling_analyzer module"""
-        import scaling_analyzer
-        self.module = scaling_analyzer
-    
+        self.module = load_module("scaling_analyzer", _SCRIPTS + "scaling_analyzer.py")
+
     def test_load_scaling_data_valid(self):
         """Test loading valid scaling data"""
         data = {
@@ -236,8 +232,7 @@ class TestMemoryProfiler(unittest.TestCase):
     
     def setUp(self):
         """Import memory_profiler module"""
-        import memory_profiler
-        self.module = memory_profiler
+        self.module = load_module("memory_profiler", _SCRIPTS + "memory_profiler.py")
     
     def test_estimate_field_memory(self):
         """Test field memory estimation"""
@@ -292,8 +287,7 @@ class TestBottleneckDetector(unittest.TestCase):
     
     def setUp(self):
         """Import bottleneck_detector module"""
-        import bottleneck_detector
-        self.module = bottleneck_detector
+        self.module = load_module("bottleneck_detector", _SCRIPTS + "bottleneck_detector.py")
     
     def test_detect_timing_bottlenecks(self):
         """Test detection of timing bottlenecks"""
@@ -333,181 +327,218 @@ class TestBottleneckDetector(unittest.TestCase):
     def test_generate_recommendations_no_bottlenecks(self):
         """Test recommendations when no bottlenecks detected"""
         recommendations = self.module.generate_recommendations([])
-        
+
         self.assertEqual(len(recommendations), 1)
         self.assertEqual(recommendations[0]['priority'], 'low')
         self.assertIn('No significant bottlenecks', recommendations[0]['issue'])
 
+    def test_over_solving_recommendation_contains_relax(self):
+        """Test REQ-B14: Over-solving recommendation contains 'relax', not 'tighten'.
+
+        When the solver is over-solving (reaching tolerance much tighter than needed),
+        the recommendation should be to RELAX the tolerance, not tighten it.
+        """
+        # Create bottleneck indicating over-solving
+        bottlenecks = [
+            {
+                'type': 'over_solving',
+                'phase': 'Linear Solver',
+                'severity': 'medium',
+                'value': 70.0,
+                'issue': 'Solver converging to much tighter tolerance than specified'
+            }
+        ]
+
+        recommendations = self.module.generate_recommendations(bottlenecks)
+
+        # Check that recommendations exist
+        self.assertGreater(len(recommendations), 0)
+
+        # Find solver-related recommendation
+        solver_recs = [r for r in recommendations if 'solver' in r.get('category', '').lower()]
+        self.assertGreater(len(solver_recs), 0)
+
+        # Check that recommendation text contains "relax" (case-insensitive)
+        rec_text = str(solver_recs[0]).lower()
+        self.assertIn('relax', rec_text)
+
+        # Verify it does NOT contain "tighten" in the context of tolerance
+        # (We want to relax, not tighten, for over-solving)
+        if 'tighten' in rec_text:
+            # If "tighten" appears, it should NOT be in the context of tolerance/solver
+            self.assertNotIn('tighten tolerance', rec_text)
+            self.assertNotIn('tighten solver', rec_text)
+
 
 # Property-Based Tests
-@unittest.skipIf(not HYPOTHESIS_AVAILABLE, "Hypothesis not installed")
-class TestTimingAnalyzerProperties(unittest.TestCase):
-    """Property-based tests for timing analyzer"""
-    
-    def setUp(self):
-        """Import timing_analyzer module"""
-        import timing_analyzer
-        self.module = timing_analyzer
-    
-    @given(
-        timing_entries=st.lists(
-            st.tuples(
-                st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
-                st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
-            ),
-            min_size=1,
-            max_size=100
+if HYPOTHESIS_AVAILABLE:
+    @unittest.skipIf(not HYPOTHESIS_AVAILABLE, "Hypothesis not installed")
+    class TestTimingAnalyzerProperties(unittest.TestCase):
+        """Property-based tests for timing analyzer"""
+
+        def setUp(self):
+            """Import timing_analyzer module"""
+            self.module = load_module("timing_analyzer", _SCRIPTS + "timing_analyzer.py")
+
+        @given(
+            timing_entries=st.lists(
+                st.tuples(
+                    st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
+                    st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
+                ),
+                min_size=1,
+                max_size=100
+            )
         )
-    )
-    @settings(max_examples=100, deadline=None)
-    def test_property_aggregation_correctness(self, timing_entries):
-        """
-        Feature: performance-profiling, Property 3: Aggregation correctness
-        
-        For any set of timing entries for the same phase, the aggregated sum should equal
-        the sum of all individual times, the mean should equal sum/count, the min should be
-        the minimum value, and the max should be the maximum value.
-        """
-        aggregated = self.module.aggregate_timings(timing_entries)
-        
-        # Group entries by phase
-        phase_times = {}
-        for phase, time_val in timing_entries:
-            if phase not in phase_times:
-                phase_times[phase] = []
-            phase_times[phase].append(time_val)
-        
-        # Verify aggregation correctness for each phase
-        for phase, times in phase_times.items():
-            self.assertIn(phase, aggregated)
-            stats = aggregated[phase]
-            
-            # Check sum
-            self.assertAlmostEqual(stats['total_time'], sum(times), places=5)
-            
-            # Check mean
-            self.assertAlmostEqual(stats['mean_time'], sum(times) / len(times), places=5)
-            
-            # Check min
-            self.assertAlmostEqual(stats['min_time'], min(times), places=5)
-            
-            # Check max
-            self.assertAlmostEqual(stats['max_time'], max(times), places=5)
-            
-            # Check count
-            self.assertEqual(stats['count'], len(times))
-    
-    @given(
-        timing_entries=st.lists(
-            st.tuples(
-                st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
-                st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
-            ),
-            min_size=1,
-            max_size=100
+        @settings(max_examples=100, deadline=None)
+        def test_property_aggregation_correctness(self, timing_entries):
+            """
+            Feature: performance-profiling, Property 3: Aggregation correctness
+
+            For any set of timing entries for the same phase, the aggregated sum should equal
+            the sum of all individual times, the mean should equal sum/count, the min should be
+            the minimum value, and the max should be the maximum value.
+            """
+            aggregated = self.module.aggregate_timings(timing_entries)
+
+            # Group entries by phase
+            phase_times = {}
+            for phase, time_val in timing_entries:
+                if phase not in phase_times:
+                    phase_times[phase] = []
+                phase_times[phase].append(time_val)
+
+            # Verify aggregation correctness for each phase
+            for phase, times in phase_times.items():
+                self.assertIn(phase, aggregated)
+                stats = aggregated[phase]
+
+                # Check sum
+                self.assertAlmostEqual(stats['total_time'], sum(times), places=5)
+
+                # Check mean
+                self.assertAlmostEqual(stats['mean_time'], sum(times) / len(times), places=5)
+
+                # Check min
+                self.assertAlmostEqual(stats['min_time'], min(times), places=5)
+
+                # Check max
+                self.assertAlmostEqual(stats['max_time'], max(times), places=5)
+
+                # Check count
+                self.assertEqual(stats['count'], len(times))
+
+        @given(
+            timing_entries=st.lists(
+                st.tuples(
+                    st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
+                    st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
+                ),
+                min_size=1,
+                max_size=100
+            )
         )
-    )
-    @settings(max_examples=100, deadline=None)
-    def test_property_slowest_phase_identification(self, timing_entries):
-        """
-        Feature: performance-profiling, Property 2: Slowest phase identification correctness
-        
-        For any set of aggregated timing data, the identified slowest phases should be
-        those with the highest total time values.
-        """
-        aggregated = self.module.aggregate_timings(timing_entries)
-        
-        if not aggregated:
-            return
-        
-        slowest = self.module.identify_slowest_phases(aggregated, top_n=3)
-        
-        # Get all phases sorted by total time
-        all_phases_sorted = sorted(aggregated.items(), key=lambda x: x[1]['total_time'], reverse=True)
-        expected_slowest = [phase for phase, _ in all_phases_sorted[:3]]
-        
-        # Verify slowest phases match expected
-        self.assertEqual(slowest, expected_slowest)
+        @settings(max_examples=100, deadline=None)
+        def test_property_slowest_phase_identification(self, timing_entries):
+            """
+            Feature: performance-profiling, Property 2: Slowest phase identification correctness
+
+            For any set of aggregated timing data, the identified slowest phases should be
+            those with the highest total time values.
+            """
+            aggregated = self.module.aggregate_timings(timing_entries)
+
+            if not aggregated:
+                return
+
+            slowest = self.module.identify_slowest_phases(aggregated, top_n=3)
+
+            # Get all phases sorted by total time
+            all_phases_sorted = sorted(aggregated.items(), key=lambda x: x[1]['total_time'], reverse=True)
+            expected_slowest = [phase for phase, _ in all_phases_sorted[:3]]
+
+            # Verify slowest phases match expected
+            self.assertEqual(slowest, expected_slowest)
 
 
-@unittest.skipIf(not HYPOTHESIS_AVAILABLE, "Hypothesis not installed")
-class TestScalingAnalyzerProperties(unittest.TestCase):
-    """Property-based tests for scaling analyzer"""
-    
-    def setUp(self):
-        """Import scaling_analyzer module"""
-        import scaling_analyzer
-        self.module = scaling_analyzer
-    
-    @given(
-        runs=st.lists(
-            st.tuples(
-                st.integers(min_value=1, max_value=1024),  # processors
-                st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
-            ),
-            min_size=2,
-            max_size=20,
-            unique_by=lambda x: x[0]  # unique processor counts
+if HYPOTHESIS_AVAILABLE:
+    @unittest.skipIf(not HYPOTHESIS_AVAILABLE, "Hypothesis not installed")
+    class TestScalingAnalyzerProperties(unittest.TestCase):
+        """Property-based tests for scaling analyzer"""
+
+        def setUp(self):
+            """Import scaling_analyzer module"""
+            self.module = load_module("scaling_analyzer", _SCRIPTS + "scaling_analyzer.py")
+
+        @given(
+            runs=st.lists(
+                st.tuples(
+                    st.integers(min_value=1, max_value=1024),  # processors
+                    st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
+                ),
+                min_size=2,
+                max_size=20,
+                unique_by=lambda x: x[0]  # unique processor counts
+            )
         )
-    )
-    @settings(max_examples=100, deadline=None)
-    def test_property_strong_scaling_efficiency_formula(self, runs):
-        """
-        Feature: performance-profiling, Property 5: Strong scaling efficiency formula
-        
-        For any set of strong scaling runs with fixed problem size, the computed efficiency
-        for N processors should equal (T_baseline / (N * T_N)) where T_baseline is the time
-        for the smallest processor count and T_N is the time for N processors.
-        """
-        # Convert to dict format
-        runs_dict = [{'processors': p, 'time': t} for p, t in runs]
-        
-        analysis = self.module.compute_strong_scaling(runs_dict)
-        
-        # Get baseline
-        sorted_runs = sorted(runs_dict, key=lambda x: x['processors'])
-        baseline_time = sorted_runs[0]['time']
-        baseline_procs = sorted_runs[0]['processors']
-        
-        # Verify efficiency formula for each result
-        for result in analysis['results']:
-            procs = result['processors']
-            time = result['time']
-            
-            # Expected efficiency = (T_baseline / T_N) / (N / N_baseline)
-            expected_efficiency = (baseline_time / time) / (procs / baseline_procs)
-            
-            self.assertAlmostEqual(result['efficiency'], expected_efficiency, places=5)
-    
-    @given(
-        runs=st.lists(
-            st.tuples(
-                st.integers(min_value=1, max_value=1024),  # processors
-                st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
-            ),
-            min_size=2,
-            max_size=20,
-            unique_by=lambda x: x[0]  # unique processor counts
+        @settings(max_examples=100, deadline=None)
+        def test_property_strong_scaling_efficiency_formula(self, runs):
+            """
+            Feature: performance-profiling, Property 5: Strong scaling efficiency formula
+
+            For any set of strong scaling runs with fixed problem size, the computed efficiency
+            for N processors should equal (T_baseline / (N * T_N)) where T_baseline is the time
+            for the smallest processor count and T_N is the time for N processors.
+            """
+            # Convert to dict format
+            runs_dict = [{'processors': p, 'time': t} for p, t in runs]
+
+            analysis = self.module.compute_strong_scaling(runs_dict)
+
+            # Get baseline
+            sorted_runs = sorted(runs_dict, key=lambda x: x['processors'])
+            baseline_time = sorted_runs[0]['time']
+            baseline_procs = sorted_runs[0]['processors']
+
+            # Verify efficiency formula for each result
+            for result in analysis['results']:
+                procs = result['processors']
+                time = result['time']
+
+                # Expected efficiency = (T_baseline / T_N) / (N / N_baseline)
+                expected_efficiency = (baseline_time / time) / (procs / baseline_procs)
+
+                self.assertAlmostEqual(result['efficiency'], expected_efficiency, places=5)
+
+        @given(
+            runs=st.lists(
+                st.tuples(
+                    st.integers(min_value=1, max_value=1024),  # processors
+                    st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
+                ),
+                min_size=2,
+                max_size=20,
+                unique_by=lambda x: x[0]  # unique processor counts
+            )
         )
-    )
-    @settings(max_examples=100, deadline=None)
-    def test_property_baseline_selection(self, runs):
-        """
-        Feature: performance-profiling, Property 7: Baseline selection correctness
-        
-        For any set of scaling runs, the baseline should be the run with the
-        smallest processor count.
-        """
-        # Convert to dict format
-        runs_dict = [{'processors': p, 'time': t} for p, t in runs]
-        
-        analysis = self.module.compute_strong_scaling(runs_dict)
-        
-        # Find minimum processor count
-        min_procs = min(p for p, _ in runs)
-        
-        # Verify baseline matches minimum
-        self.assertEqual(analysis['baseline']['processors'], min_procs)
+        @settings(max_examples=100, deadline=None)
+        def test_property_baseline_selection(self, runs):
+            """
+            Feature: performance-profiling, Property 7: Baseline selection correctness
+
+            For any set of scaling runs, the baseline should be the run with the
+            smallest processor count.
+            """
+            # Convert to dict format
+            runs_dict = [{'processors': p, 'time': t} for p, t in runs]
+
+            analysis = self.module.compute_strong_scaling(runs_dict)
+
+            # Find minimum processor count
+            min_procs = min(p for p, _ in runs)
+
+            # Verify baseline matches minimum
+            self.assertEqual(analysis['baseline']['processors'], min_procs)
 
 
 if __name__ == '__main__':

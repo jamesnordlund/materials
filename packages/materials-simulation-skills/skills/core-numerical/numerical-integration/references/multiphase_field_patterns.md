@@ -66,7 +66,7 @@ Add/subtract linear stabilizing term:
          └─implicit─┘   └───explicit───┘
 ```
 
-Choose s > max|f''(φ)| = 3 for double-well.
+Choose s > max|f''(φ)| = 2 for the standard double-well f(φ) = (φ² - 1)²/4 with |φ| ≤ 1 (since f''(φ) = 3φ² - 1, and max occurs at φ = ±1 giving f''(±1) = 2). For the alternative form f(φ) = φ⁴/4 - φ²/2, use s > 2 as well. See Eyre (1998), "Unconditionally Gradient Stable Time Marching the Cahn-Hilliard Equation," MRS Proceedings 529, 39-46.
 
 **Effect:** Explicit term becomes contractive, unconditionally stable.
 

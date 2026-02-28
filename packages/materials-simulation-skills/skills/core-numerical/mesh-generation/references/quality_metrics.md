@@ -41,24 +41,42 @@ For triangle: AR = L_max / h_min (height to opposite edge)
 
 ### Skewness
 
-Measures deviation from ideal shape.
+Measures deviation from ideal shape. **Two definitions are used in practice:**
 
-**For quadrilaterals/hexahedra:**
+**Primary: Equiangle Skewness (Knupp 2001) - Recommended**
+
+This is the standard definition used by ANSYS, Pointwise, and most CFD tools.
+
+**For quadrilaterals/hexahedra (angle-based):**
 ```
-Skewness = max(|90° - θ_i|) / 90°
+Equiangle skewness = max(|90° - θ_i|) / 90°
 
 where θ_i are the angles at vertices
 Ideal: all angles = 90°, skewness = 0
 ```
 
-**For triangles:**
+**For triangles (equilateral skewness):**
 ```
-Equilateral skewness:
-Skewness = (θ_max - 60°) / (180° - 60°)
-         = (θ_max - 60°) / 120°
+Equilateral skewness = max((θ_max - θ_eq)/(180° - θ_eq), (θ_eq - θ_min)/θ_eq)
 
-Or: Skewness = 1 - (θ_min / 60°)
+where θ_eq = 60° for triangles
+      = max((θ_max - 60°)/120°, (60° - θ_min)/60°)
+
+Ideal: all angles = 60°, skewness = 0
 ```
+
+**Alternative: Anisotropy-based Skewness**
+
+Some tools (including this skill's `mesh_quality.py`) compute anisotropy as:
+```
+Anisotropy index = 1 - (min_edge / max_edge)
+
+This is NOT the same as equiangle skewness!
+- Equiangle: Based on angles, unaffected by uniform scaling
+- Anisotropy: Based on edge lengths, measures non-uniformity
+```
+
+**Note**: When using `mesh_quality.py`, verify you are interpreting the `anisotropy_index` output correctly. The thresholds in this guide (0-0.25 excellent, etc.) apply to equiangle skewness, NOT the anisotropy-based metric. For production use, recommend using equiangle skewness via external tools (ANSYS, Salome) or ensure your interpretation of anisotropy matches your requirements.
 
 | Skewness | Quality | Notes |
 |----------|---------|-------|
@@ -348,13 +366,18 @@ def triangle_quality(p1, p2, p3):
     min_angle = np.min(angles) * 180 / np.pi
     max_angle = np.max(angles) * 180 / np.pi
 
+    # Equilateral skewness (Knupp 2001)
+    theta_eq = 60.0
+    skewness = max((max_angle - theta_eq) / (180.0 - theta_eq),
+                   (theta_eq - min_angle) / theta_eq)
+
     return {
         'radius_ratio': radius_ratio,
         'area_quality': area_quality,
         'min_angle': min_angle,
         'max_angle': max_angle,
         'aspect_ratio': max(L1, L2, L3) / min(L1, L2, L3),
-        'skewness': (max_angle - 60) / 120
+        'skewness': skewness
     }
 ```
 

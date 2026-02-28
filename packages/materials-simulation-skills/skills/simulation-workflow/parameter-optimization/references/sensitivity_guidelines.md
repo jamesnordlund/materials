@@ -10,7 +10,7 @@ Sensitivity analysis quantifies how input parameter variations affect simulation
 |----------|---------|-------------------|
 | Local (OAT) | Derivative at a point | Low (d+1 evals) |
 | Screening (Morris) | Rank parameters | Medium (r*(d+1) evals) |
-| Global (Sobol) | Variance decomposition | High (N*(d+2) evals) |
+| Global (Sobol) | Variance decomposition | High (N*(d+2) to N*(2d+2) evals) |
 
 ---
 
@@ -101,13 +101,16 @@ Indices:
 
 For Saltelli estimator:
 - Base samples `N`: 512, 1024, 2048
-- Total evaluations: `N * (d + 2)`
+- Total evaluations (first-order and total indices only): `N * (d + 2)`
+- Total evaluations (with second-order indices): `N * (2d + 2)`
 
-| Dimension | N | Total Evals |
-|-----------|---|-------------|
-| 3 | 512 | 2560 |
-| 5 | 1024 | 7168 |
-| 10 | 2048 | 24576 |
+| Dimension | N | Total (1st/total only) | Total (with 2nd-order) |
+|-----------|---|------------------------|------------------------|
+| 3 | 512 | 2560 | 4096 |
+| 5 | 1024 | 7168 | 12288 |
+| 10 | 2048 | 24576 | 45056 |
+
+**Note**: Computing second-order indices is common in practice and roughly doubles the evaluation count. Specify `calc_second_order=False` in SALib to use the smaller sample size when only first-order and total indices are needed.
 
 ### When to Use
 

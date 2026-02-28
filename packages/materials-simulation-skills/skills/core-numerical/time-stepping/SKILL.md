@@ -12,7 +12,7 @@ Provide a reliable workflow for choosing, ramping, and monitoring time steps plu
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - No external dependencies (uses stdlib)
 
 ## Inputs to Gather
@@ -73,7 +73,7 @@ Need ramping for startup?
    ```bash
    python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --max-lost-time 1800 --json
    ```
-2. Interpret: Checkpoint every 30 minutes, overhead ~0.7%, max 30 min lost work on crash.
+2. Interpret: Checkpoint every 30 minutes, overhead ~6.67%, max 30 min lost work on crash.
 
 ## Pre-Run Checklist
 
@@ -101,8 +101,9 @@ python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --m
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `dt-target must be positive` | Invalid time step | Use positive value |
+| `Safety factor > 1.0 allows dt > dt_limit (unstable)` | Unsafe safety factor | Use safety < 1.0 or add --force-unsafe flag |
 | `t-end must be > t-start` | Invalid time range | Check time bounds |
-| `checkpoint-cost must be < run-time` | Checkpoint too expensive | Reduce checkpoint size |
+| `checkpoint-cost must be positive` | Invalid checkpoint cost | Use positive value |
 
 ## Interpretation Guidance
 

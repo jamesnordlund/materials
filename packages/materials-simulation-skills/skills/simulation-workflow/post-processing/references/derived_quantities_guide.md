@@ -46,9 +46,11 @@ python derived_quantities.py --input field.json --quantity interface_area \
 ```
 
 **Interpretation:**
-- A(t) ∝ t^(-1/3): Normal coarsening (2D)
+- A(t) ∝ t^(-1/3): Normal coarsening - this is the *specific* interface area (area per particle or per unit volume), following LSW theory (Lifshitz-Slyozov-Wagner). The *total* interface area may increase as particles grow: individual particle area ∝ R² ∝ t^(2/3), but the number of particles decreases faster, so specific area ∝ t^(-1/3).
 - A(t) ∝ t^(-1/2): Interface-controlled growth
 - Sudden increase: New phase nucleation
+
+**Reference:** Lifshitz & Slyozov (1961), "The kinetics of precipitation from supersaturated solid solutions," *J. Phys. Chem. Solids* 19(1-2), 35-50; Wagner (1961), "Theorie der Alterung von Niederschlägen durch Umlösen," *Z. Elektrochemie* 65(7-8), 581-591.
 
 ## Gradient Magnitude
 

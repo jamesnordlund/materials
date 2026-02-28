@@ -60,7 +60,10 @@ solver.set_absolute_tolerance(1e-10)  # was 1e-12
 **Approach**: Use direct solver for guaranteed convergence
 
 **Trade-offs**:
-- **Direct**: O(N^1.5) time, O(N^1.3) memory, guaranteed convergence
+- **Direct (sparse, nested dissection)**: Complexity depends on problem dimension:
+  - 2D: O(N^{3/2}) time, O(N log N) memory
+  - 3D: O(N^2) time, O(N^{4/3}) memory
+  - Guaranteed convergence; actual cost depends on sparsity pattern and ordering
 - **Iterative**: O(N) time per iteration, O(N) memory, may not converge
 
 **Decision Rule**:
@@ -182,6 +185,7 @@ for i, t in enumerate(time_steps):
 
 **Implementation**:
 ```python
+# Requires: h5py (optional dependency) and mpi4py for MPI
 # Before: Serial I/O (rank 0 writes all data)
 if rank == 0:
     gather_data_from_all_ranks()
@@ -316,7 +320,7 @@ mesh = create_mesh(nx=128, ny=128, nz=128)  # 2M elements (8x less memory)
 **Approach**: Switch to iterative solver
 
 **Memory Comparison**:
-- **Direct**: O(N^1.3) memory (fill-in during factorization)
+- **Direct**: O(N log N) memory in 2D, O(N^{4/3}) memory in 3D (fill-in during factorization)
 - **Iterative**: O(N) memory (matrix + workspace vectors)
 
 **Implementation**:
@@ -448,7 +452,7 @@ solver = IterativeSolver(matvec=matvec)
 
 ### Case Study 2: Parallel Scaling
 
-**Problem**: Poor scaling beyond 8 processors (efficiency 0.55 at 16 procs)
+**Problem**: Poor scaling beyond 8 processors (efficiency 0.69 at 16 procs)
 
 **Profiling**:
 - 1 proc: 1000s

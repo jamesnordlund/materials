@@ -23,22 +23,22 @@ class TestSurrogateBuilder(unittest.TestCase):
         self.assertIn("metrics", result)
         self.assertEqual(result["model_type"], "poly")
 
-    def test_mse_calculation(self):
-        """Test MSE is computed correctly."""
+    def test_population_variance_calculation(self):
+        """Test population_variance is computed correctly."""
         # y = [1, 2, 3], mean = 2, variance = (1+0+1)/3 = 0.666...
         result = self.mod.build_surrogate([0.0, 1.0, 2.0], [1.0, 2.0, 3.0], "rbf")
-        expected_mse = (1.0 + 0.0 + 1.0) / 3
-        self.assertAlmostEqual(result["metrics"]["mse"], expected_mse, places=6)
+        expected_var = (1.0 + 0.0 + 1.0) / 3
+        self.assertAlmostEqual(result["metrics"]["population_variance"], expected_var, places=6)
 
-    def test_mse_zero_variance(self):
-        """Test MSE is zero for constant output."""
+    def test_population_variance_zero(self):
+        """Test population_variance is zero for constant output."""
         result = self.mod.build_surrogate([0.0, 1.0, 2.0], [5.0, 5.0, 5.0], "rbf")
-        self.assertAlmostEqual(result["metrics"]["mse"], 0.0, places=6)
+        self.assertAlmostEqual(result["metrics"]["population_variance"], 0.0, places=6)
 
     def test_placeholder_note(self):
-        """Test placeholder note is present."""
+        """Test production note is present."""
         result = self.mod.build_surrogate([0.0, 1.0], [1.0, 2.0], "rbf")
-        self.assertTrue(any("placeholder" in note.lower() for note in result["notes"]))
+        self.assertTrue(any("gaussian process" in note.lower() for note in result["notes"]))
 
     def test_invalid_lengths(self):
         """Test mismatched x and y lengths raises ValueError."""
@@ -69,7 +69,7 @@ class TestSurrogateBuilder(unittest.TestCase):
         y = [i * 2 for i in x]
         result = self.mod.build_surrogate(x, y, "poly")
         self.assertIn("metrics", result)
-        self.assertGreater(result["metrics"]["mse"], 0)
+        self.assertGreater(result["metrics"]["population_variance"], 0)
 
     def test_parse_list_valid(self):
         """Test parse_list with valid input."""
@@ -86,6 +86,28 @@ class TestSurrogateBuilder(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.mod.parse_list("")
         self.assertIn("comma-separated", str(ctx.exception))
+
+    def test_metrics_contain_mse_and_population_variance(self):
+        """Test that metrics dict contains both mse and population_variance.
+
+        The surrogate builder fits a model and computes predictions, so mse
+        (mean squared error of the fit) is a legitimate metric alongside the
+        population_variance of the raw output data.
+        """
+        x = [0.0, 1.0, 2.0, 3.0, 4.0]
+        y = [0.0, 1.0, 4.0, 9.0, 16.0]
+        result = self.mod.build_surrogate(x, y, "poly")
+
+        self.assertIn("metrics", result)
+        metrics = result["metrics"]
+
+        # Both mse and population_variance should be present
+        self.assertIn("population_variance", metrics)
+        self.assertIn("mse", metrics)
+
+        # mse should be a non-negative float
+        self.assertIsInstance(metrics["mse"], float)
+        self.assertGreaterEqual(metrics["mse"], 0.0)
 
 
 if __name__ == "__main__":

@@ -17,38 +17,18 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
-def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
-    """Extract field data as nested list."""
-    if field_name in data:
-        return data[field_name]
-    if "fields" in data and field_name in data["fields"]:
-        field_data = data["fields"][field_name]
-        if isinstance(field_data, dict) and "values" in field_data:
-            return field_data["values"]
-        return field_data
-    if "_data" in data and field_name in data["_data"]:
-        return data["_data"][field_name]
-    return None
-
-
-def get_field_shape(field_data: List) -> List[int]:
-    """Get shape of field data."""
-    shape = []
-    current = field_data
-    while isinstance(current, list):
-        shape.append(len(current))
-        if len(current) > 0:
-            current = current[0]
-        else:
-            break
-    return shape
+# Import shared utilities
+try:
+    from ._utils import load_json_file, get_field_data, get_field_shape
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    get_field_data = _utils.get_field_data
+    get_field_shape = _utils.get_field_shape
 
 
 def get_grid_info(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,21 +241,27 @@ def extract_line_profile(
             values.append(value)
 
             # Distance along line
-            dx = x - start[0]
-            dy = y - start[1]
-            dist = math.sqrt(dx * dx + dy * dy)
-            distances.append(dist)
+            # Compute parametric distance t in [0,1] along line
+            # Then scale by actual line length in physical coordinates
+            distances.append(t)
 
-        # Normalize distances
-        if distances[-1] > 0:
+        # Scale distances by actual line length in physical coordinates
+        # Compute line vector in physical space
+        if "Lx" in grid_info and "Ly" in grid_info:
+            # Convert fractional coordinates to physical coordinates
+            start_phys = (start[0] * grid_info["Lx"], start[1] * grid_info["Ly"])
+            end_phys = (end[0] * grid_info["Lx"], end[1] * grid_info["Ly"])
+            line_length = math.sqrt(
+                (end_phys[0] - start_phys[0]) ** 2 + (end_phys[1] - start_phys[1]) ** 2
+            )
+        else:
+            # No physical domain info, use fractional line length
             line_length = math.sqrt(
                 (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2
             )
-            # Scale by domain if available
-            if "Lx" in grid_info and "Ly" in grid_info:
-                line_length *= math.sqrt(
-                    grid_info["Lx"] ** 2 + grid_info["Ly"] ** 2
-                )
+
+        # Scale all distances by line length
+        distances = [d * line_length for d in distances]
 
         return {
             "start": start,

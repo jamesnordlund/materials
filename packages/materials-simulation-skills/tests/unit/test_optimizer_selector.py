@@ -31,14 +31,25 @@ class TestOptimizerSelector(unittest.TestCase):
         result = self.mod.select_optimizer(30, 200, "medium", False)
         self.assertIn("Random", result["recommended"][0])
 
-    def test_boundary_dim_5(self):
-        """Test boundary at dim=5."""
-        result = self.mod.select_optimizer(5, 100, "low", False)
+    def test_bo_threshold_is_10(self):
+        """Test REQ-B13: BO dimension threshold is 10.
+
+        Per Frazier (2018) and standard BO literature, Bayesian Optimization
+        is recommended for dimensions up to 10-20. The threshold should be 10,
+        not 5 as originally implemented.
+        """
+        # Dimension 10 should still recommend BO
+        result = self.mod.select_optimizer(10, 100, "low", False)
         self.assertIn("Bayesian", result["recommended"][0])
 
-    def test_boundary_dim_6(self):
-        """Test boundary at dim=6 (should be CMA-ES)."""
-        result = self.mod.select_optimizer(6, 100, "low", False)
+    def test_boundary_dim_10(self):
+        """Test boundary at dim=10 (upper limit for BO per Frazier 2018)."""
+        result = self.mod.select_optimizer(10, 100, "low", False)
+        self.assertIn("Bayesian", result["recommended"][0])
+
+    def test_boundary_dim_11(self):
+        """Test boundary at dim=11 (should be CMA-ES)."""
+        result = self.mod.select_optimizer(11, 100, "low", False)
         self.assertIn("CMA-ES", result["recommended"][0])
 
     def test_boundary_dim_20(self):

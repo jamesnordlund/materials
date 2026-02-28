@@ -1,0 +1,14 @@
+Materials
+Copyright 2025 James Nordlund
+
+This product includes software originally developed by Hesham Salama
+(https://github.com/HeshamFS):
+
+  packages/materials-simulation-skills/
+    Originally from: https://github.com/HeshamFS/materials-simulation-skills
+    Original license: Apache-2.0 (Copyright 2025 Hesham Salama)
+    Incorporated at commit c44b23cd via git subtree merge (commit 9544403).
+    Substantively modified thereafter.
+
+All code in this repository is licensed under Apache-2.0 (see LICENSE in
+the repository root).

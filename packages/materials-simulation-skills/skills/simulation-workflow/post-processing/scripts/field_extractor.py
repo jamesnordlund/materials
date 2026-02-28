@@ -16,41 +16,25 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+# Import shared utilities
+try:
+    from ._utils import load_json_file, load_csv_file as _load_csv_file, flatten_field, get_field_shape
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    _load_csv_file = _utils.load_csv_file
+    flatten_field = _utils.flatten_field
+    get_field_shape = _utils.get_field_shape
 
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
 
-
-def load_csv_file(filepath: str) -> Dict[str, Any]:
-    """Load CSV file and convert to dict format."""
-    data = {"_format": "csv", "_fields": [], "_data": {}}
-
-    with open(filepath, "r") as f:
-        lines = f.readlines()
-
-    if not lines:
-        return data
-
-    # Parse header
-    header = lines[0].strip().split(",")
-    data["_fields"] = header
-
-    # Parse data
-    for field in header:
-        data["_data"][field] = []
-
-    for line in lines[1:]:
-        values = line.strip().split(",")
-        for i, field in enumerate(header):
-            if i < len(values):
-                try:
-                    data["_data"][field].append(float(values[i]))
-                except ValueError:
-                    data["_data"][field].append(values[i])
-
-    return data
+def load_csv_file(path: str) -> Dict[str, Any]:
+    """Load CSV file with data wrapped in _data key for consistent field access."""
+    csv_data = _load_csv_file(path)
+    return {"_data": csv_data}
 
 
 def load_data_file(filepath: str) -> Dict[str, Any]:
@@ -143,28 +127,12 @@ def extract_field(data: Dict[str, Any], field_name: str) -> Optional[Dict[str, A
     return result
 
 
-def flatten_list(data: Any) -> List[float]:
-    """Flatten nested list to 1D."""
-    if not isinstance(data, list):
-        return [data] if isinstance(data, (int, float)) else []
-
-    result = []
-    for item in data:
-        result.extend(flatten_list(item))
-    return result
+# Use flatten_field from _utils (renamed from flatten_list for consistency)
+flatten_list = flatten_field
 
 
-def get_shape(data: Any) -> List[int]:
-    """Get shape of nested list."""
-    if not isinstance(data, list):
-        return []
-    if len(data) == 0:
-        return [0]
-
-    shape = [len(data)]
-    if isinstance(data[0], list):
-        shape.extend(get_shape(data[0]))
-    return shape
+# Use get_field_shape from _utils (renamed from get_shape for consistency)
+get_shape = get_field_shape
 
 
 def extract_multiple_fields(

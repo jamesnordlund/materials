@@ -76,10 +76,13 @@ Mapping: x = x(ξ,η,ζ), etc.
 | Stencils | Metric terms required |
 | Geometry | Good for smooth boundaries |
 
-**Metric terms:**
+**Metric terms (Thompson, Warsi & Mastin 1985, Ch. 5):**
 ```
-∂/∂x = (1/J)[∂ξ/∂x × ∂/∂ξ + ∂η/∂x × ∂/∂η + ∂ζ/∂x × ∂/∂ζ]
-where J = Jacobian of mapping
+∂/∂x = ∂ξ/∂x × ∂/∂ξ + ∂η/∂x × ∂/∂η + ∂ζ/∂x × ∂/∂ζ
+
+where the metric coefficients (∂ξ/∂x, ∂η/∂x, ∂ζ/∂x) are computed as:
+∂ξ/∂x = (1/J) × (∂y/∂η × ∂z/∂ζ - ∂z/∂η × ∂y/∂ζ)
+and J = Jacobian determinant of the forward mapping (x,y,z) → (ξ,η,ζ)
 ```
 
 **Common transformations:**

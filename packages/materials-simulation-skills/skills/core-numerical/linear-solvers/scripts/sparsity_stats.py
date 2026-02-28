@@ -3,42 +3,83 @@ import argparse
 import json
 import os
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
+import scipy.sparse
 
 
-def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
-    _, ext = os.path.splitext(path)
-    if ext == ".npy":
-        return np.load(path)
-    return np.loadtxt(path, delimiter=delimiter)
+# Enable import of shared utilities from skills/_shared/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+from _shared._matrix_io import load_matrix  # noqa: E402
 
 
-def compute_stats(matrix: np.ndarray, symmetry_tol: float) -> dict:
+def compute_stats(matrix: Union[np.ndarray, scipy.sparse.spmatrix], symmetry_tol: float) -> dict:
+    """Compute sparsity statistics for a matrix.
+
+    Supports both dense numpy arrays and sparse scipy matrices.
+    For sparse matrices, computes NNZ and density from sparse format directly.
+
+    Args:
+        matrix: Input matrix (dense or sparse)
+        symmetry_tol: Tolerance for symmetry check
+
+    Returns:
+        Dictionary with sparsity statistics
+    """
+    is_sparse = scipy.sparse.issparse(matrix)
+
     if matrix.ndim != 2:
         raise ValueError("matrix must be 2D")
-    if not np.all(np.isfinite(matrix)):
-        raise ValueError("matrix contains non-finite values")
 
     m, n = matrix.shape
-    nnz = int(np.count_nonzero(matrix))
-    density = float(nnz) / float(m * n) if m * n > 0 else 0.0
 
-    # bandwidth: max |i-j| where A_ij != 0
-    rows, cols = np.nonzero(matrix)
+    # Compute NNZ and density
+    if is_sparse:
+        # Check finiteness for sparse matrices using the .data array
+        if not np.all(np.isfinite(matrix.data)):
+            raise ValueError("matrix contains non-finite values")
+        # For sparse matrices, use the nnz attribute directly
+        nnz = int(matrix.nnz)
+        density = float(nnz) / float(m * n) if m * n > 0 else 0.0
+    else:
+        # Dense case (original behavior)
+        if not np.all(np.isfinite(matrix)):
+            raise ValueError("matrix contains non-finite values")
+        nnz = int(np.count_nonzero(matrix))
+        density = float(nnz) / float(m * n) if m * n > 0 else 0.0
+
+    # Bandwidth: max |i-j| where A_ij != 0
+    if is_sparse:
+        # For sparse matrices, use nonzero() method
+        rows, cols = matrix.nonzero()
+    else:
+        rows, cols = np.nonzero(matrix)
+
     if rows.size:
         bandwidth = int(np.max(np.abs(rows - cols)))
     else:
         bandwidth = 0
 
-    symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
+    # Symmetry check - for sparse, convert to dense only for check (or skip for very large)
+    if is_sparse and m > 10000:
+        # Skip symmetry check for large sparse matrices
+        symmetric = None
+    elif is_sparse:
+        # Convert to dense for symmetry check (small matrices only)
+        symmetric = bool(
+            np.allclose(matrix.toarray(), matrix.T.toarray(), atol=symmetry_tol, rtol=0.0)
+        )
+    else:
+        symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
+
     return {
         "shape": [m, n],
         "nnz": nnz,
         "density": density,
         "bandwidth": bandwidth,
         "symmetry": symmetric,
+        "is_sparse": is_sparse,
     }
 
 

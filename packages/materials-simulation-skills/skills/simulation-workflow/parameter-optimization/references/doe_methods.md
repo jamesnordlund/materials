@@ -91,15 +91,21 @@ Sobol (uniform fill)        Random (clusters/gaps)
 
 ### Sample Size Recommendations
 
-For Sobol sensitivity analysis, use `N * (d + 2)` samples where:
+For Sobol sensitivity analysis using the Saltelli estimator, total evaluations depend on whether second-order indices are computed:
+- **First-order and total indices only**: `N * (d + 2)` samples
+- **With second-order indices**: `N * (2d + 2)` samples
+
+Where:
 - `N` = base sample size (64, 128, 256, 512, 1024)
 - `d` = number of parameters
 
-| Dimension | Base N | Total Samples |
-|-----------|--------|---------------|
-| 3 | 64 | 320 |
-| 5 | 128 | 896 |
-| 10 | 256 | 3072 |
+| Dimension | Base N | Total (1st/total only) | Total (with 2nd-order) |
+|-----------|--------|------------------------|------------------------|
+| 3 | 64 | 320 | 512 |
+| 5 | 128 | 896 | 1536 |
+| 10 | 256 | 3072 | 5632 |
+
+**Note**: SALib's `saltelli.sample()` defaults to computing second-order indices (`calc_second_order=True`), which uses the `N * (2d + 2)` formula. Set `calc_second_order=False` to use the smaller `N * (d + 2)` sample size.
 
 ---
 
@@ -145,6 +151,93 @@ Example: 3 levels, 2 dimensions = 9 samples
 
 ---
 
+## Halton Sequences
+
+### How It Works
+
+Halton sequences are another class of low-discrepancy (quasi-random) sequences, based on the Van der Corput sequence in different prime bases for each dimension. For dimension d, the i-th point uses the radical-inverse function in the d-th prime base.
+
+```
+Example: First 8 Halton points in 2D (bases 2, 3)
+
+    1.0 |       x       |
+    0.8 |   x       x   |
+    0.6 |       x       |
+    0.4 |   x       x   |
+    0.2 | x       x     |
+        +---+---+---+---+
+          0.2 0.4 0.6 0.8
+```
+
+### When to Use
+
+- Low to moderate dimensions (2-10 parameters)
+- Need deterministic, reproducible sampling
+- Sequential sampling (can add points one at a time without regenerating)
+- Simpler implementation than Sobol
+
+### Halton vs Sobol
+
+| Property | Halton | Sobol |
+|----------|--------|-------|
+| Dimensions | Best for 2-10 | Best for 2-15 |
+| Correlation | Degrades in high d | Better uniformity in high d |
+| Extensibility | Trivially add points | Powers of 2 preferred |
+| Scrambling | Owen scrambling | Digital shift/scramble |
+| Implementation | `scipy.stats.qmc.Halton` | `scipy.stats.qmc.Sobol` |
+
+### Sample Code
+
+```python
+from scipy.stats import qmc
+sampler = qmc.Halton(d=3, scramble=True, seed=42)
+samples = sampler.random(n=64)
+# Scale to parameter bounds
+lower = [0.001, 0.1, 1.0]
+upper = [0.01, 1.0, 100.0]
+scaled = qmc.scale(samples, lower, upper)
+```
+
+**Reference:** Halton, J.H. (1960). On the efficiency of certain quasi-random sequences of points in evaluating multi-dimensional integrals. *Numerische Mathematik*, 2(1), 84-90.
+
+---
+
+## Multi-Objective Optimization (NSGA-II)
+
+For problems with multiple conflicting objectives (e.g., minimize simulation error AND minimize computational cost), Pareto-optimal solutions are needed.
+
+### NSGA-II Algorithm
+
+Non-dominated Sorting Genetic Algorithm II:
+
+1. Generate initial population
+2. Evaluate all objectives for each individual
+3. Non-dominated sorting: rank individuals by Pareto dominance
+4. Crowding distance: diversity metric within each rank
+5. Selection, crossover, mutation to create offspring
+6. Combine parent and offspring, select best by rank then crowding distance
+7. Repeat until convergence
+
+### When to Use
+
+- Two or more conflicting objectives
+- Want a set of trade-off solutions (Pareto front)
+- Moderate evaluation budgets (100-10,000)
+- Discrete or continuous parameters
+
+### Libraries
+
+| Library | Multi-Objective Support | Notes |
+|---------|------------------------|-------|
+| pymoo | NSGA-II, NSGA-III, MOEA/D | Recommended for multi-objective |
+| Optuna | Built-in NSGA-II | Easy integration |
+| platypus | NSGA-II, MOEA/D, IBEA | Research-oriented |
+| DEAP | NSGA-II via custom setup | Flexible but more setup |
+
+**Reference:** Deb, K. et al. (2002). A fast and elitist multiobjective genetic algorithm: NSGA-II. *IEEE Trans. Evol. Comput.*, 6(2), 182-197.
+
+---
+
 ## Decision Flowchart
 
 ```
@@ -165,7 +258,8 @@ Is d <= 3 AND need corner coverage?
 ## Implementation Notes
 
 The `doe_generator.py` script in this skill:
-- Uses standard library only (no scipy/numpy required)
-- LHS: True Latin Hypercube with random permutations
-- Sobol: Simplified quasi-random (for full Sobol, use scipy.stats.qmc)
+- LHS: True Latin Hypercube with random permutations (uses only random module)
+- Sobol: Full low-discrepancy sequences via scipy.stats.qmc.Sobol with scrambling
+- R-sequence: Golden-ratio quasi-random sampling (uses only math module)
 - Factorial: Full grid with level interpolation
+- Dependencies: numpy, scipy (for Sobol method)

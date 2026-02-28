@@ -17,37 +17,17 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
-def load_csv_file(filepath: str) -> Dict[str, List[Any]]:
-    """Load CSV file as column-based dict."""
-    data = {}
-
-    with open(filepath, "r") as f:
-        lines = f.readlines()
-
-    if not lines:
-        return data
-
-    header = lines[0].strip().split(",")
-    for col in header:
-        data[col] = []
-
-    for line in lines[1:]:
-        values = line.strip().split(",")
-        for i, col in enumerate(header):
-            if i < len(values):
-                try:
-                    data[col].append(float(values[i]))
-                except ValueError:
-                    data[col].append(values[i])
-
-    return data
+# Import shared utilities
+try:
+    from ._utils import load_json_file, load_csv_file
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    load_csv_file = _utils.load_csv_file
 
 
 def load_time_series(filepath: str) -> Dict[str, Any]:
@@ -300,13 +280,37 @@ def compute_convergence_rate(
     values: List[float],
     target: Optional[float] = None
 ) -> Dict[str, Any]:
-    """Estimate convergence rate from residual history."""
+    """Estimate convergence rate from a time series.
+
+    Fits a linear regression to log(|value - target|) vs iteration index
+    to estimate the per-iteration decay factor.
+
+    Args:
+        values: Time series of values (e.g., residuals, errors, field quantities).
+        target: Target value the series is converging to.
+            - For residuals / error norms: use 0.0 (residuals should decay
+              to zero).
+            - For field values approaching steady state: use the known
+              steady-state value, or None to auto-estimate from the final
+              value.
+            If None (the default), the function infers the target using a
+            heuristic: 0.0 when all recent values are strictly positive
+            (typical of residual norms), otherwise the final value in the
+            series.
+
+    Returns:
+        Dictionary with convergence rate, type, iterations per decade,
+        and the target value used.
+    """
     if len(values) < 3:
         return {"rate": None, "type": "unknown"}
 
-    # If no target, assume converging to zero or last value
+    # If no explicit target, infer from the data:
+    #   - All-positive tail (typical of residual norms) -> target 0.0
+    #   - Otherwise (e.g. field values oscillating around a limit) -> final value
     if target is None:
-        target = 0.0 if all(v > 0 for v in values[-10:]) else values[-1]
+        tail = values[-min(10, len(values)):]
+        target = 0.0 if all(v > 0 for v in tail) else values[-1]
 
     # Compute errors
     errors = [abs(v - target) for v in values]
@@ -347,6 +351,7 @@ def compute_convergence_rate(
     return {
         "rate": rate,
         "type": conv_type,
+        "target_used": target,
         "iterations_per_decade": -1 / math.log10(rate) if rate and rate < 1 else None
     }
 
@@ -381,6 +386,13 @@ def main():
         type=float,
         default=1e-6,
         help="Tolerance for steady state detection (default: 1e-6)"
+    )
+    parser.add_argument(
+        "--target",
+        type=float,
+        default=None,
+        help="Target value for convergence rate (default: None for auto-detect; "
+             "0.0 for residuals, final value otherwise)"
     )
     parser.add_argument(
         "--include-smoothed",
@@ -425,7 +437,7 @@ def main():
             "statistics": compute_statistics(values),
             "monotonicity": detect_monotonicity(values),
             "oscillations": detect_oscillations(values),
-            "convergence": compute_convergence_rate(values)
+            "convergence": compute_convergence_rate(values, target=args.target)
         }
 
         if times:
@@ -479,6 +491,8 @@ def main():
                 print(f"\nConvergence:")
                 print(f"  Type: {conv['type']}")
                 print(f"  Rate: {conv['rate']:.4f}")
+                if conv.get("target_used") is not None:
+                    print(f"  Target: {conv['target_used']:.6g}")
                 if conv["iterations_per_decade"]:
                     print(f"  Iterations per decade: {conv['iterations_per_decade']:.1f}")
 

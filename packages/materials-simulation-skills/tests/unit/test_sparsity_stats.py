@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse
 
 from tests.unit._utils import load_module
 
@@ -29,6 +30,29 @@ class TestSparsityStats(unittest.TestCase):
         matrix = np.array([[1.0, float("nan")]])
         with self.assertRaises(ValueError):
             self.mod.compute_stats(matrix, symmetry_tol=1e-8)
+
+
+    def test_sparse_non_finite_nan(self):
+        """Sparse matrix with NaN in .data should raise ValueError."""
+        dense = np.array([[1.0, float("nan")], [0.0, 2.0]])
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        with self.assertRaises(ValueError, msg="matrix contains non-finite values"):
+            self.mod.compute_stats(sparse_matrix, symmetry_tol=1e-8)
+
+    def test_sparse_non_finite_inf(self):
+        """Sparse matrix with Inf in .data should raise ValueError."""
+        dense = np.array([[float("inf"), 0.0], [0.0, 2.0]])
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        with self.assertRaises(ValueError, msg="matrix contains non-finite values"):
+            self.mod.compute_stats(sparse_matrix, symmetry_tol=1e-8)
+
+    def test_sparse_finite_succeeds(self):
+        """Valid sparse matrix should compute stats without error."""
+        dense = np.eye(4)
+        sparse_matrix = scipy.sparse.csr_matrix(dense)
+        stats = self.mod.compute_stats(sparse_matrix, symmetry_tol=1e-8)
+        self.assertTrue(stats["is_sparse"])
+        self.assertEqual(stats["nnz"], 4)
 
 
 if __name__ == "__main__":

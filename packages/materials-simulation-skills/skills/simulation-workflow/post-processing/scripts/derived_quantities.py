@@ -17,51 +17,19 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
-
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
-def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
-    """Extract field data as nested list."""
-    if field_name in data:
-        return data[field_name]
-    if "fields" in data and field_name in data["fields"]:
-        field_data = data["fields"][field_name]
-        if isinstance(field_data, dict) and "values" in field_data:
-            return field_data["values"]
-        return field_data
-    if "_data" in data and field_name in data["_data"]:
-        return data["_data"][field_name]
-    return None
-
-
-def flatten_field(field: Any) -> List[float]:
-    """Flatten nested list to 1D array."""
-    if not isinstance(field, list):
-        if isinstance(field, (int, float)):
-            return [float(field)]
-        return []
-
-    result = []
-    for item in field:
-        result.extend(flatten_field(item))
-    return result
-
-
-def get_field_shape(field: List) -> List[int]:
-    """Get shape of nested list."""
-    shape = []
-    current = field
-    while isinstance(current, list):
-        shape.append(len(current))
-        if len(current) > 0:
-            current = current[0]
-        else:
-            break
-    return shape
+# Import shared utilities
+try:
+    from ._utils import load_json_file, get_field_data, flatten_field, get_field_shape
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    get_field_data = _utils.get_field_data
+    flatten_field = _utils.flatten_field
+    get_field_shape = _utils.get_field_shape
 
 
 def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
@@ -233,6 +201,13 @@ def compute_gradient_magnitude(
     if len(shape) == 1:
         # 1D gradient
         dx = spacing["dx"]
+        if len(field) < 2:
+            return {
+                "gradient_magnitude": [0.0] * len(field),
+                "max": 0.0,
+                "mean": 0.0,
+                "method": "central_difference_1d",
+            }
         grad = []
         for i in range(len(field)):
             if i == 0:
@@ -323,17 +298,21 @@ def compute_total_variation(field: List, spacing: Dict[str, float]) -> Dict[str,
 
     if len(shape) == 2:
         ny, nx = shape
+        dx = spacing["dx"]
+        dy = spacing["dy"]
         tv = 0.0
 
+        # X-direction gradients (divided by dx for proper units)
         for j in range(ny):
             for i in range(nx - 1):
-                tv += abs(field[j][i + 1] - field[j][i])
+                tv += abs(field[j][i + 1] - field[j][i]) / dx
 
+        # Y-direction gradients (divided by dy for proper units)
         for j in range(ny - 1):
             for i in range(nx):
-                tv += abs(field[j + 1][i] - field[j][i])
+                tv += abs(field[j + 1][i] - field[j][i]) / dy
 
-        domain_area = (nx * spacing["dx"]) * (ny * spacing["dy"])
+        domain_area = (nx * dx) * (ny * dy)
         return {
             "total_variation": tv,
             "normalized_tv": tv / domain_area if domain_area > 0 else 0,

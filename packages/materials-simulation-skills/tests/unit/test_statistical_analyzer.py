@@ -195,5 +195,89 @@ class TestStatisticalAnalyzerIO(unittest.TestCase):
         self.assertEqual(shape, [2, 2, 2])
 
 
+class TestParseRegionCondition(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "statistical_analyzer",
+            "skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py",
+        )
+
+    def test_parse_region_condition_simple(self):
+        """'x > 0.5' returns callable with correct True/False."""
+        fn = self.mod._parse_region_condition("x > 0.5")
+        self.assertTrue(fn(x=0.6))
+        self.assertFalse(fn(x=0.4))
+
+    def test_parse_region_condition_compound(self):
+        """'x > 0.3 and x < 0.7' works."""
+        fn = self.mod._parse_region_condition("x > 0.3 and x < 0.7")
+        self.assertTrue(fn(x=0.5))
+        self.assertFalse(fn(x=0.1))
+        self.assertFalse(fn(x=0.9))
+
+    def test_parse_region_condition_multi_var(self):
+        """'x > 0.0 and y < 0.5' works."""
+        fn = self.mod._parse_region_condition("x > 0.0 and y < 0.5")
+        self.assertTrue(fn(x=0.1, y=0.2))
+        self.assertFalse(fn(x=0.1, y=0.8))
+        self.assertFalse(fn(x=-0.1, y=0.2))
+
+    def test_parse_region_condition_rejects_calls(self):
+        """Function calls like __import__('os') are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod._parse_region_condition("__import__('os')")
+
+    def test_parse_region_condition_rejects_unknown_var(self):
+        """Unknown variable names like 't' are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod._parse_region_condition("t > 0")
+
+
+class TestBuildRegionMask(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "statistical_analyzer",
+            "skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py",
+        )
+
+    def test_build_region_mask_1d(self):
+        """1D mask with spacing selects correct indices."""
+        fn = self.mod._parse_region_condition("x >= 2.0")
+        # shape [5], dx=1.0 → coords 0,1,2,3,4 → mask at indices 2,3,4
+        mask = self.mod.build_region_mask(fn, [5], {"dx": 1.0, "dy": 1.0, "dz": 1.0})
+        self.assertEqual(mask, [False, False, True, True, True])
+
+    def test_build_region_mask_2d(self):
+        """2D mask with spacing."""
+        fn = self.mod._parse_region_condition("x > 0.5")
+        # shape [2, 3], dx=0.5 → x coords 0.0, 0.5, 1.0
+        mask = self.mod.build_region_mask(fn, [2, 3], {"dx": 0.5, "dy": 1.0, "dz": 1.0})
+        # Only x=1.0 (index 2) should be True in each row
+        self.assertEqual(mask, [[False, False, True], [False, False, True]])
+
+
+class TestRegionalStatisticsWithMask(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "statistical_analyzer",
+            "skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py",
+        )
+
+    def test_regional_statistics_with_mask(self):
+        """End-to-end: field + mask → filtered stats."""
+        # 1D field: values 10, 20, 30, 40, 50
+        field = [10.0, 20.0, 30.0, 40.0, 50.0]
+        # Mask: only last 3 elements
+        mask = [False, False, True, True, True]
+        stats = self.mod.compute_regional_statistics(field, region_mask=mask)
+        self.assertEqual(stats["count"], 3)
+        self.assertAlmostEqual(stats["mean"], 40.0)
+        self.assertAlmostEqual(stats["min"], 30.0)
+        self.assertAlmostEqual(stats["max"], 50.0)
+
+
 if __name__ == "__main__":
     unittest.main()

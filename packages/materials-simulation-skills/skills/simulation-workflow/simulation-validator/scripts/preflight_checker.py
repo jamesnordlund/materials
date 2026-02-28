@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 from typing import Dict, List, Optional, Tuple
 
@@ -37,6 +38,8 @@ def load_config(path: str) -> Dict[str, object]:
             return json.load(handle)
     # Minimal YAML-like fallback: key: value per line
     config: Dict[str, object] = {}
+    # Regex for scientific notation: optional sign, digits, optional decimal, optional digits, e/E, optional sign, digits
+    sci_notation_re = re.compile(r'^[+-]?\d+\.?\d*[eE][+-]?\d+$')
     with open(path, "r", encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -48,7 +51,10 @@ def load_config(path: str) -> Dict[str, object]:
             key = key.strip()
             value = value.strip()
             try:
-                if "." in value or "e" in value.lower():
+                # Check for scientific notation first
+                if sci_notation_re.match(value):
+                    parsed = float(value)
+                elif "." in value:
                     parsed = float(value)
                 else:
                     parsed = int(value)
@@ -75,6 +81,74 @@ def parse_ranges(raw: Optional[str]) -> Dict[str, Tuple[float, float]]:
         name, min_val, max_val = part.split(":", 2)
         ranges[name.strip()] = (float(min_val), float(max_val))
     return ranges
+
+
+def check_mesh_quality(config: Dict[str, object]) -> List[str]:
+    """
+    Check mesh quality metrics if available in config.
+
+    Conditionally checks mesh quality thresholds:
+    - min_element_quality < 0.1 -> warning
+    - max_aspect_ratio > 100 -> warning
+    - max_skewness > 0.95 -> warning
+
+    Args:
+        config: Simulation configuration dict
+
+    Returns:
+        List of warning messages (empty if no issues or no mesh data)
+    """
+    warnings: List[str] = []
+
+    # Check for mesh metrics in config (nested under 'mesh' key or at top level)
+    mesh = config.get("mesh", {})
+    if not isinstance(mesh, dict):
+        # No mesh data or invalid format - skip checks
+        return warnings
+
+    # Check minimum element quality
+    min_quality = mesh.get("min_element_quality")
+    if min_quality is not None:
+        try:
+            quality_val = float(min_quality)
+            if quality_val < 0.1:
+                warnings.append(
+                    f"Very poor minimum element quality: {quality_val:.3f} "
+                    "(threshold: 0.1)"
+                )
+        except (TypeError, ValueError):
+            # Non-numeric value - skip check
+            pass
+
+    # Check maximum aspect ratio
+    max_aspect = mesh.get("max_aspect_ratio")
+    if max_aspect is not None:
+        try:
+            aspect_val = float(max_aspect)
+            if aspect_val > 100:
+                warnings.append(
+                    f"Extreme aspect ratio: {aspect_val:.1f} "
+                    "(threshold: 100)"
+                )
+        except (TypeError, ValueError):
+            # Non-numeric value - skip check
+            pass
+
+    # Check maximum skewness
+    max_skewness = mesh.get("max_skewness")
+    if max_skewness is not None:
+        try:
+            skewness_val = float(max_skewness)
+            if skewness_val > 0.95:
+                warnings.append(
+                    f"Severe mesh skewness: {skewness_val:.3f} "
+                    "(threshold: 0.95)"
+                )
+        except (TypeError, ValueError):
+            # Non-numeric value - skip check
+            pass
+
+    return warnings
 
 
 def preflight_check(
@@ -127,6 +201,10 @@ def preflight_check(
 
     if "material_source" not in config and "materials_source" not in config:
         warnings.append("Material property source not specified.")
+
+    # Check mesh quality metrics if present (REQ-F05)
+    mesh_warnings = check_mesh_quality(config)
+    warnings.extend(mesh_warnings)
 
     status = "PASS"
     if blockers:

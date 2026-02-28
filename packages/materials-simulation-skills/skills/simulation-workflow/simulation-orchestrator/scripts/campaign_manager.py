@@ -23,7 +23,24 @@ import os
 import sys
 import time
 import uuid
+import warnings
 from typing import Any, Dict, List, Optional
+
+# File locking support (POSIX only)
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
+
+
+def _warn_no_fcntl() -> None:
+    """Emit a one-time warning that file locking is unavailable."""
+    warnings.warn(
+        "File locking not available on this platform",
+        RuntimeWarning,
+        stacklevel=3,
+    )
 
 
 def generate_campaign_id() -> str:
@@ -40,20 +57,93 @@ def load_manifest(config_dir: str) -> Dict[str, Any]:
         return json.load(f)
 
 
+def _load_campaign_locked(campaign_path: str) -> Dict[str, Any]:
+    """Load campaign.json with advisory file locking.
+
+    Uses shared lock (LOCK_SH) to allow concurrent readers.
+    Falls back to no locking on platforms without fcntl.
+
+    Args:
+        campaign_path: Path to campaign.json file
+
+    Returns:
+        Campaign state dictionary
+    """
+    if HAS_FCNTL:
+        # POSIX file locking with shared lock for reading
+        fd = os.open(campaign_path, os.O_RDONLY)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH)
+            # Duplicate fd so we can use it with fdopen while keeping original for unlock
+            dup_fd = os.dup(fd)
+            try:
+                dup_f = os.fdopen(dup_fd, 'r')
+            except Exception:
+                os.close(dup_fd)
+                raise
+            with dup_f as f:
+                data = json.load(f)
+            return data
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+    else:
+        _warn_no_fcntl()
+        # Fallback for platforms without fcntl (e.g., Windows)
+        with open(campaign_path, "r") as f:
+            return json.load(f)
+
+
 def load_campaign(config_dir: str) -> Dict[str, Any]:
     """Load campaign state from config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     if not os.path.exists(campaign_path):
         raise ValueError(f"Campaign not initialized. Run with --action init first.")
-    with open(campaign_path, "r") as f:
-        return json.load(f)
+    return _load_campaign_locked(campaign_path)
+
+
+def _save_campaign_locked(campaign_path: str, campaign: Dict[str, Any]) -> None:
+    """Save campaign.json with advisory file locking.
+
+    Uses exclusive lock (LOCK_EX) to serialize writers.
+    Falls back to no locking on platforms without fcntl.
+
+    Args:
+        campaign_path: Path to campaign.json file
+        campaign: Campaign state dictionary to save
+    """
+    if HAS_FCNTL:
+        # POSIX file locking with exclusive lock for writing
+        # Use O_CREAT to handle case where file doesn't exist yet
+        fd = os.open(campaign_path, os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            # Truncate file and write
+            os.ftruncate(fd, 0)
+            os.lseek(fd, 0, os.SEEK_SET)
+            # Duplicate fd so we can use it with fdopen while keeping original for unlock
+            dup_fd = os.dup(fd)
+            try:
+                dup_f = os.fdopen(dup_fd, 'w')
+            except Exception:
+                os.close(dup_fd)
+                raise
+            with dup_f as f:
+                json.dump(campaign, f, indent=2)
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+    else:
+        _warn_no_fcntl()
+        # Fallback for platforms without fcntl (e.g., Windows)
+        with open(campaign_path, "w") as f:
+            json.dump(campaign, f, indent=2)
 
 
 def save_campaign(config_dir: str, campaign: Dict[str, Any]) -> None:
     """Save campaign state to config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
-    with open(campaign_path, "w") as f:
-        json.dump(campaign, f, indent=2)
+    _save_campaign_locked(campaign_path, campaign)
 
 
 def init_campaign(

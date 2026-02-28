@@ -12,8 +12,9 @@ Provide a workflow to design experiments, rank parameter influence, and select o
 
 ## Requirements
 
-- Python 3.8+
-- No external dependencies (uses Python standard library only)
+- Python 3.10+
+- NumPy, SciPy (for RBF interpolation and quasi-random sampling)
+- Matplotlib (optional, for visualization)
 
 ## Inputs to Gather
 
@@ -47,7 +48,7 @@ Is dimension <= 3 AND full coverage needed?
 ### Choosing an Optimizer
 
 ```
-Is dimension <= 5 AND budget <= 100?
+Is dimension <= 10 AND budget <= 100?
 ├── YES → Bayesian Optimization
 └── NO → Is dimension <= 20?
     ├── YES → CMA-ES
@@ -119,13 +120,20 @@ python3 scripts/surrogate_builder.py --x 0,1,2 --y 10,12,15 --model rbf --json
 |-------|-------|------------|
 | `params must be positive` | Zero or negative dimension | Ask user for valid parameter count |
 | `budget must be positive` | Zero or negative budget | Ask user for realistic simulation budget |
-| `method must be lhs, sobol, or factorial` | Invalid method | Use decision guidance to pick valid method |
-| `scores must be comma-separated` | Malformed input | Reformat as `0.1,0.2,0.3` |
+| `method must be one of: factorial, lhs, r-sequence, sobol` | Invalid method | Use decision guidance to pick valid method |
+| `scores must be a comma-separated list` | Malformed input | Reformat as `0.1,0.2,0.3` |
+| `value list must be a comma-separated list` | Malformed x or y input | Reformat as `0,1,2` |
+| `x and y must have same length` | Mismatched input sizes | Provide equal-length x and y lists |
+| `need at least 2 samples` | Insufficient data | Provide at least 2 data points |
+| `model must be rbf or poly` | Invalid surrogate type | Use `rbf` or `poly` |
+| `dim must be positive` | Zero or negative dimension | Provide valid dimension count |
+| `noise must be low, medium, or high` | Invalid noise level | Use one of the three valid noise levels |
+| `names count must match scores count` | Mismatched names and scores | Provide same number of names as scores |
 
 ## Limitations
 
 - **Not for real-time optimization**: Scripts provide recommendations, not live optimization loops
-- **Surrogate is a placeholder**: `surrogate_builder.py` computes basic metrics; replace with actual model for production
+- **Surrogate is a placeholder** (v1.0): `surrogate_builder.py` implements basic RBF and polynomial models; for production use, integrate with SMT, scikit-learn, or GPyTorch for advanced surrogate modeling with cross-validation and hyperparameter tuning
 - **No automatic simulation execution**: User must run simulations externally and provide results
 
 ## References

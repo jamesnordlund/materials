@@ -212,6 +212,157 @@ class TestPreflightChecker(unittest.TestCase):
         )
         self.assertNotEqual(report["status"], "BLOCK")
 
+    # Mesh quality check tests (REQ-F05)
+    def test_mesh_quality_no_mesh_data(self):
+        """Test no warnings when mesh data absent."""
+        report = self.mod.preflight_check(
+            config={"dt": 0.01, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # Should not have mesh-related warnings
+        self.assertFalse(any("element quality" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("aspect ratio" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("skewness" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_poor_element_quality(self):
+        """Test warning for min_element_quality < 0.1."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"min_element_quality": 0.05}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        self.assertEqual(report["status"], "WARN")
+        self.assertTrue(any("element quality" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_good_element_quality(self):
+        """Test no warning for min_element_quality >= 0.1."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"min_element_quality": 0.3}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # Should not warn about element quality
+        self.assertFalse(any("element quality" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_extreme_aspect_ratio(self):
+        """Test warning for max_aspect_ratio > 100."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"max_aspect_ratio": 250}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        self.assertEqual(report["status"], "WARN")
+        self.assertTrue(any("aspect ratio" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_normal_aspect_ratio(self):
+        """Test no warning for max_aspect_ratio <= 100."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"max_aspect_ratio": 50}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # Should not warn about aspect ratio
+        self.assertFalse(any("aspect ratio" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_severe_skewness(self):
+        """Test warning for max_skewness > 0.95."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"max_skewness": 0.98}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        self.assertEqual(report["status"], "WARN")
+        self.assertTrue(any("skewness" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_normal_skewness(self):
+        """Test no warning for max_skewness <= 0.95."""
+        report = self.mod.preflight_check(
+            config={"mesh": {"max_skewness": 0.5}, "material_source": "test"},
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # Should not warn about skewness
+        self.assertFalse(any("skewness" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_multiple_issues(self):
+        """Test multiple mesh quality warnings."""
+        report = self.mod.preflight_check(
+            config={
+                "mesh": {
+                    "min_element_quality": 0.05,
+                    "max_aspect_ratio": 250,
+                    "max_skewness": 0.98,
+                },
+                "material_source": "test",
+            },
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        self.assertEqual(report["status"], "WARN")
+        # Should have all three warnings
+        self.assertTrue(any("element quality" in w.lower() for w in report["warnings"]))
+        self.assertTrue(any("aspect ratio" in w.lower() for w in report["warnings"]))
+        self.assertTrue(any("skewness" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_boundary_values(self):
+        """Test exact threshold values (should not warn at threshold)."""
+        report = self.mod.preflight_check(
+            config={
+                "mesh": {
+                    "min_element_quality": 0.1,
+                    "max_aspect_ratio": 100,
+                    "max_skewness": 0.95,
+                },
+                "material_source": "test",
+            },
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # At exact thresholds, should not trigger warnings
+        self.assertFalse(any("element quality" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("aspect ratio" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("skewness" in w.lower() for w in report["warnings"]))
+
+    def test_mesh_quality_non_numeric_values(self):
+        """Test graceful handling of non-numeric mesh quality values."""
+        report = self.mod.preflight_check(
+            config={
+                "mesh": {
+                    "min_element_quality": "not_a_number",
+                    "max_aspect_ratio": "invalid",
+                    "max_skewness": "bad",
+                },
+                "material_source": "test",
+            },
+            required=[],
+            ranges={},
+            output_dir=None,
+            min_free_gb=0.0,
+        )
+        # Should not crash; should not have mesh quality warnings
+        self.assertFalse(any("element quality" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("aspect ratio" in w.lower() for w in report["warnings"]))
+        self.assertFalse(any("skewness" in w.lower() for w in report["warnings"]))
+
 
 if __name__ == "__main__":
     unittest.main()

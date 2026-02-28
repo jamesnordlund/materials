@@ -97,8 +97,11 @@ Fo ≤ 1 / (2 × d)
 ### Reaction
 
 ```
-R ≤ 1   (or R ≤ 0.2 for safety margin)
+R ≤ 2   (linear stability limit for explicit Euler on y' = -k*y, k > 0)
+R ≤ 1   (stricter limit ensuring monotonicity/positivity preservation)
 ```
+
+Use `R ≤ 1` (or `R ≤ 0.2` for safety margin) when positivity or monotonicity is required. The linear stability region of explicit Euler for real negative eigenvalues extends to `|1 + z| < 1`, i.e., `-2 < k*dt < 0`, giving `R ≤ 2`.
 
 For stiff reactions (k >> 1), explicit methods are inefficient.
 
@@ -240,6 +243,7 @@ def compute_stable_dt(dx, v, D, k, dimensions, safety=0.9):
 ```
 ADVECTION:  dt ≤ dx / v           (CFL ≤ 1)
 DIFFUSION:  dt ≤ dx² / (2·d·D)    (Fo ≤ 1/(2d))
-REACTION:   dt ≤ 1 / k            (R ≤ 1)
+REACTION:   dt ≤ 2 / k            (R ≤ 2, linear stability)
+            dt ≤ 1 / k            (R ≤ 1, monotonicity)
 COMBINED:   dt = min(all limits) × safety
 ```

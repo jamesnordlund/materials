@@ -8,7 +8,8 @@ from typing import Dict, List
 
 PATTERNS = [
     (re.compile(r"nan|inf|overflow", re.IGNORECASE), "Numerical blow-up", "Reduce dt, tighten tolerances, or increase damping."),
-    (re.compile(r"diverg|residual", re.IGNORECASE), "Convergence failure", "Check solver/preconditioner settings and matrix conditioning."),
+    (re.compile(r"residual\s*(?:increas|blow|explod|diverg|not\s+decreas)", re.IGNORECASE), "Convergence failure", "Check solver/preconditioner settings and matrix conditioning."),
+    (re.compile(r"\bdiverg\w*\b", re.IGNORECASE), "Convergence failure", "Reduce dt, check boundary conditions, or improve initial guess."),
     (re.compile(r"out of memory|allocation failed", re.IGNORECASE), "Memory exhaustion", "Reduce resolution or enable out-of-core options."),
     (re.compile(r"disk full|permission denied", re.IGNORECASE), "I/O error", "Check disk space and permissions."),
 ]

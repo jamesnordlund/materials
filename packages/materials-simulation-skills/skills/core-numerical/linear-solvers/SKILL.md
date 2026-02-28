@@ -12,7 +12,7 @@ Provide a universal workflow to select a solver, assess conditioning, and diagno
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy, SciPy (for matrix operations)
 - See individual scripts for dependencies
 
@@ -47,7 +47,7 @@ Is matrix small (n < 5000) and dense?
 | Matrix Type | Solver | Preconditioner |
 |-------------|--------|----------------|
 | SPD, sparse | CG | AMG, IC |
-| Symmetric indefinite | MINRES | ILU |
+| Symmetric indefinite | MINRES | ICC, Jacobi, or symmetric AMG |
 | Nonsymmetric | GMRES, BiCGSTAB | ILU, AMG |
 | Dense | LU, Cholesky | None |
 | Saddle point | Schur complement, Uzawa | Block preconditioner |
@@ -123,9 +123,10 @@ python3 scripts/residual_norms.py --residual 1,0.1,0.01 --rhs 1,0,0 --json
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `Matrix file not found` | Invalid path | Check file exists |
-| `Matrix must be square` | Non-square input | Verify matrix dimensions |
-| `Residuals must be positive` | Invalid residual data | Check input format |
+| `matrix must be 2D` | Invalid matrix shape | Provide 2D matrix |
+| `symmetric scaling requires a square matrix` | Non-square input with symmetric flag | Verify matrix dimensions or remove --symmetric |
+| `residuals must be positive and finite` | Invalid residual data | Check residual values |
+| `size must be positive` | Invalid matrix size | Use positive size value |
 
 ## Interpretation Guidance
 

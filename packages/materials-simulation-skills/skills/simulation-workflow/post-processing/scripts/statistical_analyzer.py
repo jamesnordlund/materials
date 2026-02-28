@@ -11,57 +11,43 @@ Usage:
 """
 
 import argparse
+import ast
 import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
+# Import shared utilities
+try:
+    from ._utils import load_json_file, get_field_data, flatten_field, get_field_shape
+except ImportError:
+    # Fallback for standalone execution
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_utils)
+    load_json_file = _utils.load_json_file
+    get_field_data = _utils.get_field_data
+    flatten_field = _utils.flatten_field
+    get_field_shape = _utils.get_field_shape
 
-def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
-    with open(filepath, "r") as f:
-        return json.load(f)
-
-
-def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
-    """Extract field data as nested list."""
-    if field_name in data:
-        return data[field_name]
-    if "fields" in data and field_name in data["fields"]:
-        field_data = data["fields"][field_name]
-        if isinstance(field_data, dict) and "values" in field_data:
-            return field_data["values"]
-        return field_data
-    if "_data" in data and field_name in data["_data"]:
-        return data["_data"][field_name]
-    return None
-
-
-def flatten_field(field: Any) -> List[float]:
-    """Flatten nested list to 1D array of floats."""
-    if not isinstance(field, list):
-        if isinstance(field, (int, float)):
-            return [float(field)]
-        return []
-
-    result = []
-    for item in field:
-        result.extend(flatten_field(item))
-    return result
-
-
-def get_field_shape(field: List) -> List[int]:
-    """Get shape of nested list."""
-    shape = []
-    current = field
-    while isinstance(current, list):
-        shape.append(len(current))
-        if len(current) > 0:
-            current = current[0]
-        else:
-            break
-    return shape
+# Import path validation from shared module
+try:
+    from skills._shared._path_validation import (
+        add_sandbox_args, resolve_sandbox_root, validate_all_paths,
+    )
+except ImportError:
+    import importlib.util as _ilu
+    _pv_path = os.path.join(
+        os.path.dirname(__file__), ".." , "..", "..", "_shared", "_path_validation.py",
+    )
+    _pv_spec = _ilu.spec_from_file_location("_path_validation", _pv_path)
+    _pv_mod = _ilu.module_from_spec(_pv_spec)
+    _pv_spec.loader.exec_module(_pv_mod)
+    add_sandbox_args = _pv_mod.add_sandbox_args
+    resolve_sandbox_root = _pv_mod.resolve_sandbox_root
+    validate_all_paths = _pv_mod.validate_all_paths
 
 
 def compute_basic_statistics(values: List[float]) -> Dict[str, Any]:
@@ -141,23 +127,53 @@ def compute_median(values: List[float]) -> Optional[float]:
 
 
 def compute_skewness(values: List[float], mean: float, std: float) -> Optional[float]:
-    """Compute skewness (third standardized moment)."""
+    """Compute skewness (third standardized moment).
+
+    Uses the population formula (biased estimator) consistent with numpy/scipy
+    default behavior. The population standard deviation is used in the denominator.
+
+    Formula: skewness = E[(X - mu)^3] / sigma^3
+    where sigma is the population standard deviation.
+    """
     if len(values) < 3 or std == 0:
         return None
 
     n = len(values)
+    # Population third moment
     m3 = sum((x - mean) ** 3 for x in values) / n
-    return m3 / (std ** 3)
+    # Population variance (for consistency, recompute std as population)
+    pop_variance = sum((x - mean) ** 2 for x in values) / n
+    pop_std = math.sqrt(pop_variance)
+
+    if pop_std == 0:
+        return None
+
+    return m3 / (pop_std ** 3)
 
 
 def compute_kurtosis(values: List[float], mean: float, std: float) -> Optional[float]:
-    """Compute excess kurtosis (fourth standardized moment - 3)."""
+    """Compute excess kurtosis (fourth standardized moment - 3).
+
+    Uses the population formula (biased estimator) consistent with numpy/scipy
+    default behavior. The population standard deviation is used in the denominator.
+
+    Formula: kurtosis = E[(X - mu)^4] / sigma^4 - 3
+    where sigma is the population standard deviation.
+    """
     if len(values) < 4 or std == 0:
         return None
 
     n = len(values)
+    # Population fourth moment
     m4 = sum((x - mean) ** 4 for x in values) / n
-    return (m4 / (std ** 4)) - 3
+    # Population variance (for consistency, recompute std as population)
+    pop_variance = sum((x - mean) ** 2 for x in values) / n
+    pop_std = math.sqrt(pop_variance)
+
+    if pop_std == 0:
+        return None
+
+    return (m4 / (pop_std ** 4)) - 3
 
 
 def compute_histogram(
@@ -278,15 +294,137 @@ def detect_distribution_type(
         return {"type": "multimodal", "confidence": 0.5, "peaks": len(peaks)}
 
 
-def parse_region_condition(condition: str) -> callable:
-    """Parse simple region condition string like 'x>0.3 and x<0.7'."""
-    # For simplicity, return a function that always returns True
-    # In a full implementation, this would parse and evaluate conditions
+_REGION_ALLOWED_NAMES = {"x", "y", "z"}
 
-    def always_true(*args):
-        return True
 
-    return always_true
+def _validate_region_ast(node: ast.AST) -> None:
+    """Validate that an AST node contains only safe coordinate expressions.
+
+    Allows: comparisons, boolean operators (and/or), variable names x/y/z,
+    numeric constants, and unary minus for negative numbers.
+    Raises ValueError for anything else.
+    """
+    if isinstance(node, ast.Expression):
+        _validate_region_ast(node.body)
+    elif isinstance(node, ast.BoolOp):
+        # 'and' / 'or'
+        for v in node.values:
+            _validate_region_ast(v)
+    elif isinstance(node, ast.Compare):
+        _validate_region_ast(node.left)
+        for comparator in node.comparators:
+            _validate_region_ast(comparator)
+    elif isinstance(node, ast.Name):
+        if node.id not in _REGION_ALLOWED_NAMES:
+            raise ValueError(
+                f"Unknown variable '{node.id}' in region condition; "
+                f"allowed: {sorted(_REGION_ALLOWED_NAMES)}"
+            )
+    elif isinstance(node, ast.Constant):
+        if not isinstance(node.value, (int, float)):
+            raise ValueError(
+                f"Only numeric constants allowed in region condition, "
+                f"got {type(node.value).__name__}"
+            )
+    elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        _validate_region_ast(node.operand)
+    else:
+        raise ValueError(
+            f"Disallowed syntax in region condition: {type(node).__name__}"
+        )
+
+
+def _parse_region_condition(condition: str) -> Callable[..., bool]:
+    """Parse a coordinate condition string into a callable.
+
+    Accepts expressions like ``"x > 0.3 and x < 0.7"`` or
+    ``"x > 0.0 and y < 0.5"``.  Only the variable names ``x``, ``y``,
+    ``z``, numeric literals, comparisons, and boolean ``and``/``or``
+    operators are permitted.  Everything else raises ``ValueError``.
+
+    Returns a function ``(x, y, z) -> bool``.
+    """
+    try:
+        tree = ast.parse(condition, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError(f"Invalid region condition syntax: {exc}") from exc
+
+    _validate_region_ast(tree)
+
+    code = compile(tree, filename="<region>", mode="eval")
+
+    def condition_fn(x: float = 0.0, y: float = 0.0, z: float = 0.0) -> bool:
+        return bool(eval(code, {"__builtins__": {}}, {"x": x, "y": y, "z": z}))
+
+    return condition_fn
+
+
+def _get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
+    """Extract or compute grid spacing from data metadata.
+
+    Looks for explicit ``dx``/``dy``/``dz`` keys, falls back to
+    ``Lx``/``Ly``/``Lz`` divided by ``(N-1)``, and defaults to ``1.0``.
+    """
+    spacing: Dict[str, float] = {}
+
+    for key in ["dx", "dy", "dz"]:
+        if key in data:
+            spacing[key] = data[key]
+
+    if "Lx" in data and len(shape) >= 1 and shape[-1] > 1:
+        spacing.setdefault("dx", data["Lx"] / (shape[-1] - 1))
+    if "Ly" in data and len(shape) >= 2 and shape[-2] > 1:
+        spacing.setdefault("dy", data["Ly"] / (shape[-2] - 1))
+    if "Lz" in data and len(shape) >= 3 and shape[-3] > 1:
+        spacing.setdefault("dz", data["Lz"] / (shape[-3] - 1))
+
+    spacing.setdefault("dx", 1.0)
+    spacing.setdefault("dy", 1.0)
+    spacing.setdefault("dz", 1.0)
+
+    return spacing
+
+
+def build_region_mask(
+    condition_fn: Callable[..., bool],
+    shape: List[int],
+    spacing: Dict[str, float],
+) -> List:
+    """Build a boolean mask matching *shape* by evaluating *condition_fn*.
+
+    Coordinates are computed with a cell-center convention:
+    ``coord = index * spacing``.
+
+    Returns a nested list of ``bool`` with the same structure as the field.
+    """
+    dx = spacing.get("dx", 1.0)
+    dy = spacing.get("dy", 1.0)
+    dz = spacing.get("dz", 1.0)
+
+    ndim = len(shape)
+
+    if ndim == 1:
+        nx = shape[0]
+        return [condition_fn(x=i * dx) for i in range(nx)]
+
+    if ndim == 2:
+        ny, nx = shape
+        return [
+            [condition_fn(x=i * dx, y=j * dy) for i in range(nx)]
+            for j in range(ny)
+        ]
+
+    if ndim == 3:
+        nz, ny, nx = shape
+        return [
+            [
+                [condition_fn(x=i * dx, y=j * dy, z=k * dz) for i in range(nx)]
+                for j in range(ny)
+            ]
+            for k in range(nz)
+        ]
+
+    raise ValueError(f"build_region_mask supports 1-3D fields, got {ndim}D")
 
 
 def compute_regional_statistics(
@@ -366,7 +504,7 @@ def main():
     )
     parser.add_argument(
         "--region",
-        help="Region condition (e.g., 'x>0.3 and x<0.7')"
+        help="Coordinate condition for regional statistics, e.g. 'x>0.3 and x<0.7'",
     )
     parser.add_argument(
         "--histogram",
@@ -393,8 +531,17 @@ def main():
         action="store_true",
         help="Output as JSON"
     )
+    add_sandbox_args(parser)
 
     args = parser.parse_args()
+
+    # Validate paths against sandbox root (only when sandbox is explicitly set)
+    if getattr(args, "sandbox_root", None) or os.environ.get("MATERIALS_SANDBOX_ROOT"):
+        sandbox = resolve_sandbox_root(args)
+        path_err = validate_all_paths(args, sandbox, ["input"])
+        if path_err is not None:
+            print(f"Path validation error: {path_err}", file=sys.stderr)
+            sys.exit(2)
 
     try:
         # Load data
@@ -450,10 +597,14 @@ def main():
 
         # Regional statistics (if requested)
         if args.region:
-            # Note: Full region parsing not implemented
+            condition_fn = _parse_region_condition(args.region)
+            spacing = _get_grid_spacing(data, shape)
+            mask = build_region_mask(condition_fn, shape, spacing)
+            regional = compute_regional_statistics(field, region_mask=mask)
             result["region"] = {
                 "condition": args.region,
-                "note": "Region filtering requires coordinate data"
+                "spacing": spacing,
+                "statistics": regional,
             }
 
         # Output
@@ -498,6 +649,16 @@ def main():
                     print(f"  X-direction std: {sv['x_variation']['std']:.6g}")
                 if "y_variation" in sv:
                     print(f"  Y-direction std: {sv['y_variation']['std']:.6g}")
+
+            if "region" in result:
+                rs = result["region"]["statistics"]
+                print(f"\nRegional Statistics (condition: {result['region']['condition']}):")
+                print(f"  Count: {rs['count']}")
+                if rs["mean"] is not None:
+                    print(f"  Min: {rs['min']:.6g}")
+                    print(f"  Max: {rs['max']:.6g}")
+                    print(f"  Mean: {rs['mean']:.6g}")
+                    print(f"  Std: {rs['std']:.6g}")
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
