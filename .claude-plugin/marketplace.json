@@ -1,0 +1,64 @@
+{
+  "name": "jamesnordlund-materials",
+  "owner": {
+    "name": "James Nordlund",
+    "url": "https://github.com/jamesnordlund"
+  },
+  "metadata": {
+    "description": "Computational materials science toolkit with Materials Project MCP server and numerical simulation skills for Claude Code",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "materials-mcp",
+      "description": "MCP server bridging Claude with Materials Project and MPContribs APIs for thermodynamics, electronic structure, crystal structures, and community-contributed materials data.",
+      "source": "./packages/materials-mcp",
+      "author": {
+        "name": "James Nordlund"
+      },
+      "homepage": "https://github.com/jamesnordlund/materials",
+      "repository": "https://github.com/jamesnordlund/materials",
+      "license": "Apache-2.0",
+      "keywords": ["mcp", "materials-science", "materials-project", "mpcontribs", "pymatgen"],
+      "category": "science",
+      "mcpServers": {
+        "materials-science": {
+          "command": "uv",
+          "args": ["run", "--directory", "packages/materials-mcp", "mcp-materials"],
+          "env": {
+            "MP_API_KEY": "${MP_API_KEY}"
+          }
+        }
+      }
+    },
+    {
+      "name": "materials-simulation-skills",
+      "description": "Agent skills for numerical simulation workflows including stability analysis, integration, solvers, meshing, and simulation orchestration.",
+      "source": "./packages/materials-simulation-skills",
+      "author": {
+        "name": "James Nordlund"
+      },
+      "homepage": "https://github.com/jamesnordlund/materials",
+      "repository": "https://github.com/jamesnordlund/materials",
+      "license": "Apache-2.0",
+      "keywords": ["simulation", "numerical-methods", "finite-element", "CFD", "materials-science"],
+      "category": "science",
+      "skills": [
+        "./skills/core-numerical/numerical-stability",
+        "./skills/core-numerical/numerical-integration",
+        "./skills/core-numerical/linear-solvers",
+        "./skills/core-numerical/nonlinear-solvers",
+        "./skills/core-numerical/time-stepping",
+        "./skills/core-numerical/differentiation-schemes",
+        "./skills/core-numerical/mesh-generation",
+        "./skills/core-numerical/multiphase-field",
+        "./skills/core-numerical/multiphase-field-imex",
+        "./skills/simulation-workflow/simulation-validator",
+        "./skills/simulation-workflow/parameter-optimization",
+        "./skills/simulation-workflow/simulation-orchestrator",
+        "./skills/simulation-workflow/post-processing",
+        "./skills/simulation-workflow/performance-profiling"
+      ]
+    }
+  ]
+}
