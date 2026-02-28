@@ -15,15 +15,16 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, get_field_data, get_field_shape
+    from ._utils import get_field_data, get_field_shape, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
@@ -31,7 +32,7 @@ except ImportError:
     get_field_shape = _utils.get_field_shape
 
 
-def get_grid_info(data: Dict[str, Any]) -> Dict[str, Any]:
+def get_grid_info(data: dict[str, Any]) -> dict[str, Any]:
     """Extract grid information from data."""
     info = {}
 
@@ -56,7 +57,7 @@ def get_grid_info(data: Dict[str, Any]) -> Dict[str, Any]:
     return info
 
 
-def interpolate_1d(values: List[float], position: float) -> float:
+def interpolate_1d(values: list[float], position: float) -> float:
     """Linear interpolation in 1D array."""
     n = len(values)
     if n == 0:
@@ -79,7 +80,7 @@ def interpolate_1d(values: List[float], position: float) -> float:
     return values[idx_low] * (1 - frac) + values[idx_high] * frac
 
 
-def get_value_2d(field: List[List[float]], i: int, j: int) -> float:
+def get_value_2d(field: list[list[float]], i: int, j: int) -> float:
     """Get value from 2D field with bounds checking."""
     ny = len(field)
     if ny == 0:
@@ -93,7 +94,7 @@ def get_value_2d(field: List[List[float]], i: int, j: int) -> float:
 
 
 def interpolate_2d(
-    field: List[List[float]],
+    field: list[list[float]],
     x_frac: float,
     y_frac: float
 ) -> float:
@@ -130,11 +131,11 @@ def interpolate_2d(
 
 
 def extract_axis_profile(
-    field: List,
+    field: list,
     axis: str,
     slice_position: float,
-    grid_info: Dict[str, Any]
-) -> Dict[str, Any]:
+    grid_info: dict[str, Any]
+) -> dict[str, Any]:
     """Extract profile along axis at slice position."""
     shape = get_field_shape(field)
     ndim = len(shape)
@@ -198,12 +199,12 @@ def extract_axis_profile(
 
 
 def extract_line_profile(
-    field: List,
-    start: Tuple[float, ...],
-    end: Tuple[float, ...],
+    field: list,
+    start: tuple[float, ...],
+    end: tuple[float, ...],
     num_points: int,
-    grid_info: Dict[str, Any]
-) -> Dict[str, Any]:
+    grid_info: dict[str, Any]
+) -> dict[str, Any]:
     """Extract profile along arbitrary line."""
     shape = get_field_shape(field)
     ndim = len(shape)
@@ -275,13 +276,13 @@ def extract_line_profile(
     raise ValueError(f"Line profiles not supported for {ndim}D data")
 
 
-def parse_point(s: str) -> Tuple[float, ...]:
+def parse_point(s: str) -> tuple[float, ...]:
     """Parse point string like '0.5,0.5' or '0,0.5,0'."""
     parts = s.strip().split(",")
     return tuple(float(p.strip()) for p in parts)
 
 
-def compute_profile_statistics(values: List[float]) -> Dict[str, Any]:
+def compute_profile_statistics(values: list[float]) -> dict[str, Any]:
     """Compute statistics for profile values."""
     if not values:
         return {}
@@ -305,10 +306,10 @@ def compute_profile_statistics(values: List[float]) -> Dict[str, Any]:
 
 
 def detect_interface(
-    values: List[float],
-    coordinates: List[float],
+    values: list[float],
+    coordinates: list[float],
     threshold: float = 0.5
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Detect interface location in profile."""
     crossings = []
 
@@ -456,7 +457,7 @@ def main():
             print(f"Points: {result['points']}")
 
             stats = result["statistics"]
-            print(f"\nStatistics:")
+            print("\nStatistics:")
             print(f"  Min: {stats['min']:.6g}")
             print(f"  Max: {stats['max']:.6g}")
             print(f"  Mean: {stats['mean']:.6g}")
@@ -470,7 +471,7 @@ def main():
                     print(f"    {c['direction']} at x={c['position']:.4f}")
 
             # Print first/last few values
-            print(f"\nProfile data (first 5):")
+            print("\nProfile data (first 5):")
             for i in range(min(5, result["points"])):
                 x = result["coordinates"][i]
                 y = result["values"][i]

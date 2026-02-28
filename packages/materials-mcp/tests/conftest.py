@@ -1,6 +1,5 @@
 """Pytest configuration for mcp_materials tests."""
 
-import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 

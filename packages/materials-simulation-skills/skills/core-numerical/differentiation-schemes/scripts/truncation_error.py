@@ -2,10 +2,9 @@
 import argparse
 import json
 import sys
-from typing import Dict
 
 
-def estimate_truncation_error(dx: float, accuracy: int, scale: float) -> Dict[str, object]:
+def estimate_truncation_error(dx: float, accuracy: int, scale: float) -> dict[str, object]:
     if dx <= 0:
         raise ValueError("dx must be positive")
     if accuracy <= 0:

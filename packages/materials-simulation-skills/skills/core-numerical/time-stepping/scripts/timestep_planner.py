@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import math
 import sys
-from typing import Dict, List, Optional
 
 
 def compute_ramp(
@@ -11,7 +9,7 @@ def compute_ramp(
     dt_target: float,
     steps: int,
     kind: str,
-) -> List[float]:
+) -> list[float]:
     if steps <= 0:
         return []
     if kind == "linear":
@@ -30,13 +28,13 @@ def plan_timestep(
     dt_target: float,
     dt_limit: float,
     safety: float,
-    dt_min: Optional[float],
-    dt_max: Optional[float],
+    dt_min: float | None,
+    dt_max: float | None,
     ramp_steps: int,
     ramp_kind: str,
     preview_steps: int,
     force_unsafe: bool = False,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     if dt_target <= 0 or dt_limit <= 0:
         raise ValueError("dt_target and dt_limit must be positive")
     if safety <= 0:
@@ -45,7 +43,10 @@ def plan_timestep(
     # Check for unsafe safety factor
     if safety > 1.0:
         if not force_unsafe:
-            raise ValueError("Safety factor > 1.0 allows dt > dt_limit (unstable). Use --force-unsafe to override.")
+            raise ValueError(
+                "Safety factor > 1.0 allows dt > dt_limit (unstable)."
+                " Use --force-unsafe to override."
+            )
         else:
             print("WARNING: Safety factor > 1.0 may produce unstable time steps.", file=sys.stderr)
 
@@ -62,7 +63,7 @@ def plan_timestep(
     if dt_max is not None:
         dt_recommended = min(dt_recommended, dt_max)
 
-    notes: List[str] = []
+    notes: list[str] = []
     if dt_recommended < dt_target * safety:
         notes.append("Recommended dt reduced by stability limit.")
     if dt_min is not None and dt_recommended == dt_min:

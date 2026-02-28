@@ -3,7 +3,6 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, Optional
 
 
 def clamp(value: float, min_value: float, max_value: float) -> float:
@@ -19,8 +18,8 @@ def compute_step(
     min_factor: float,
     max_factor: float,
     controller: str,
-    prev_error: Optional[float],
-) -> Dict[str, object]:
+    prev_error: float | None,
+) -> dict[str, object]:
     if dt <= 0:
         raise ValueError("dt must be positive")
     if order < 1:

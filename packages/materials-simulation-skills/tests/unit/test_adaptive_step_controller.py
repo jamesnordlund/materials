@@ -110,7 +110,6 @@ class TestAdaptiveStepController(unittest.TestCase):
         prev_error is intentionally different from accept_threshold so the k2
         term contributes a non-unity multiplier and is actually exercised.
         """
-        import math
 
         # Use prev_error=1.5 (not 1.0) so the k2 term is non-trivial.
         # With prev_error == accept_threshold the k2 term evaluates to 1.0

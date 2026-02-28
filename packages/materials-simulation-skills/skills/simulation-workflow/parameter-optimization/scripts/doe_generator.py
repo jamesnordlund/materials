@@ -3,13 +3,11 @@ import argparse
 import json
 import random
 import sys
-from typing import Dict, List
 
-import numpy as np
 from scipy.stats import qmc
 
 
-def lhs_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
+def lhs_samples(dim: int, budget: int, seed: int) -> list[list[float]]:
     rng = random.Random(seed)
     samples = []
     for d in range(dim):
@@ -23,7 +21,7 @@ def lhs_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
     return samples
 
 
-def sobol_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
+def sobol_samples(dim: int, budget: int, seed: int) -> list[list[float]]:
     """Generate Sobol quasi-random samples using scipy.stats.qmc.Sobol.
 
     Sobol sequences require a power-of-2 number of samples for optimal properties.
@@ -49,7 +47,7 @@ def sobol_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
     return samples_array.tolist()
 
 
-def r_sequence_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
+def r_sequence_samples(dim: int, budget: int, seed: int) -> list[list[float]]:
     """Generate R-sequence samples using additive recurrence (golden ratio).
 
     This is a simplified quasi-random sequence based on the golden ratio.
@@ -68,7 +66,7 @@ def r_sequence_samples(dim: int, budget: int, seed: int) -> List[List[float]]:
     return samples
 
 
-def factorial_samples(dim: int, budget: int) -> List[List[float]]:
+def factorial_samples(dim: int, budget: int) -> list[list[float]]:
     levels = int(round(budget ** (1.0 / dim)))
     levels = max(levels, 2)
     grid = [i / (levels - 1) for i in range(levels)]
@@ -78,7 +76,7 @@ def factorial_samples(dim: int, budget: int) -> List[List[float]]:
     return samples[:budget]
 
 
-def generate_doe(dim: int, budget: int, method: str, seed: int) -> Dict[str, object]:
+def generate_doe(dim: int, budget: int, method: str, seed: int) -> dict[str, object]:
     if dim <= 0:
         raise ValueError("params must be positive")
     if budget <= 0:

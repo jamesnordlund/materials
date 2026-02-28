@@ -480,9 +480,7 @@ async def contribs_get_table(
 
     # Enforce absolute memory limit: cap max_rows regardless of user input
     rows_to_fetch = max_rows
-    if rows_to_fetch == -1:
-        rows_to_fetch = MAX_ROWS_ABSOLUTE
-    elif rows_to_fetch > MAX_ROWS_ABSOLUTE:
+    if rows_to_fetch == -1 or rows_to_fetch > MAX_ROWS_ABSOLUTE:
         rows_to_fetch = MAX_ROWS_ABSOLUTE
 
     def _query():
@@ -503,7 +501,8 @@ async def contribs_get_table(
             data = [[_sanitize_value(v) for v in row] for row in df.values.tolist()]
             truncated = False
         else:
-            data = [[_sanitize_value(v) for v in row] for row in df.head(rows_to_fetch).values.tolist()]
+            rows = df.head(rows_to_fetch).values.tolist()
+            data = [[_sanitize_value(v) for v in row] for row in rows]
             truncated = True
 
         return json.dumps({

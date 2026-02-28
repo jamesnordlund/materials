@@ -3,7 +3,7 @@
 import argparse
 import json
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 
 def advise_globalization(
@@ -12,7 +12,7 @@ def advise_globalization(
     previous_failures: int,
     oscillating_residual: bool,
     step_rejection_rate: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Recommend globalization strategy for nonlinear solvers.
 
     Args:
@@ -39,7 +39,7 @@ def advise_globalization(
     if not 0.0 <= step_rejection_rate <= 1.0:
         raise ValueError("step_rejection_rate must be between 0.0 and 1.0")
 
-    notes: List[str] = []
+    notes: list[str] = []
 
     # Decision logic for strategy selection
     use_trust_region = False
@@ -203,7 +203,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "problem_type": args.problem_type,
             "jacobian_quality": args.jacobian_quality,

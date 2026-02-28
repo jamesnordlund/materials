@@ -12,12 +12,16 @@ class TestSplittingErrorEstimator(unittest.TestCase):
         )
 
     def test_strang_error(self):
-        result = self.mod.estimate_error(dt=1e-3, scheme="strang", commutator_norm=100.0, target_error=0.0)
+        result = self.mod.estimate_error(
+            dt=1e-3, scheme="strang", commutator_norm=100.0, target_error=0.0
+        )
         self.assertGreater(result["error_estimate"], 0.0)
         self.assertEqual(result["order"], 2)
 
     def test_target_error(self):
-        result = self.mod.estimate_error(dt=1e-2, scheme="lie", commutator_norm=10.0, target_error=1e-6)
+        result = self.mod.estimate_error(
+            dt=1e-2, scheme="lie", commutator_norm=10.0, target_error=1e-6
+        )
         self.assertGreaterEqual(result["substeps"], 1)
         self.assertLessEqual(result["error_estimate"], 1e-6)
 

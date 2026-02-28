@@ -1,8 +1,5 @@
 """Unit tests for post-processing statistical_analyzer.py script."""
 
-import json
-import math
-import os
 import shutil
 import tempfile
 import unittest
@@ -137,7 +134,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         """Test detecting uniform distribution."""
         values = list(range(100))
         hist = self.mod.compute_histogram(values, num_bins=10)
-        result = self.mod.detect_distribution_type(values, hist)
+        self.mod.detect_distribution_type(values, hist)
         # Should detect as roughly uniform or monotonic
 
     def test_detect_distribution_type_bimodal(self):

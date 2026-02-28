@@ -3,7 +3,6 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -38,14 +37,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
+def load_matrix(path: str, delimiter: str | None) -> np.ndarray:
     _, ext = os.path.splitext(path)
     if ext == ".npy":
         return np.load(path, allow_pickle=False)
     return np.loadtxt(path, delimiter=delimiter)
 
 
-def compute_stiffness(eigs: np.ndarray, threshold: float) -> Dict[str, object]:
+def compute_stiffness(eigs: np.ndarray, threshold: float) -> dict[str, object]:
     """
     Compute stiffness ratio from eigenvalues using real parts.
 

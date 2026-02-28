@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
 def select_integrator(
@@ -14,15 +13,15 @@ def select_integrator(
     accuracy: str,
     dimension: int,
     low_memory: bool,
-) -> Dict[str, List[str] | str]:
+) -> dict[str, list[str] | str]:
     if dimension <= 0:
         raise ValueError("dimension must be positive")
     if accuracy not in {"low", "medium", "high"}:
         raise ValueError("accuracy must be low, medium, or high")
 
-    recommended: List[str] = []
-    alternatives: List[str] = []
-    notes: List[str] = []
+    recommended: list[str] = []
+    alternatives: list[str] = []
+    notes: list[str] = []
 
     if stiff:
         if implicit_allowed or jacobian_available:

@@ -23,19 +23,19 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def load_campaign(config_dir: str) -> Dict[str, Any]:
+def load_campaign(config_dir: str) -> dict[str, Any]:
     """Load campaign state from config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     if not os.path.exists(campaign_path):
         raise ValueError(f"Campaign not found: {campaign_path}")
-    with open(campaign_path, "r") as f:
+    with open(campaign_path) as f:
         return json.load(f)
 
 
-def save_campaign(config_dir: str, campaign: Dict[str, Any]) -> None:
+def save_campaign(config_dir: str, campaign: dict[str, Any]) -> None:
     """Save campaign state to config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     with open(campaign_path, "w") as f:
@@ -43,8 +43,8 @@ def save_campaign(config_dir: str, campaign: Dict[str, Any]) -> None:
 
 
 def detect_job_status(
-    job: Dict[str, Any], config_dir: str, result_pattern: Optional[str] = None
-) -> Dict[str, Any]:
+    job: dict[str, Any], config_dir: str, result_pattern: str | None = None
+) -> dict[str, Any]:
     """Detect job status based on output files.
 
     Status detection logic:
@@ -121,8 +121,8 @@ def detect_job_status(
 
 
 def update_all_jobs(
-    config_dir: str, result_pattern: Optional[str] = None
-) -> Dict[str, Any]:
+    config_dir: str, result_pattern: str | None = None
+) -> dict[str, Any]:
     """Update status of all jobs in campaign.
 
     Args:
@@ -161,7 +161,7 @@ def update_all_jobs(
     }
 
 
-def get_job_info(config_dir: str, job_id: str) -> Dict[str, Any]:
+def get_job_info(config_dir: str, job_id: str) -> dict[str, Any]:
     """Get detailed information about a specific job.
 
     Args:
@@ -184,8 +184,8 @@ def mark_job_status(
     config_dir: str,
     job_id: str,
     status: str,
-    exit_code: Optional[int] = None,
-) -> Dict[str, Any]:
+    exit_code: int | None = None,
+) -> dict[str, Any]:
     """Manually mark a job's status.
 
     Args:

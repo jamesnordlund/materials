@@ -16,15 +16,17 @@ import json
 import math
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, get_field_data, flatten_field, get_field_shape
+    from ._utils import flatten_field, get_field_data, get_field_shape, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
@@ -35,7 +37,9 @@ except ImportError:
 # Import path validation from shared module
 try:
     from skills._shared._path_validation import (
-        add_sandbox_args, resolve_sandbox_root, validate_all_paths,
+        add_sandbox_args,
+        resolve_sandbox_root,
+        validate_all_paths,
     )
 except ImportError:
     import importlib.util as _ilu
@@ -50,7 +54,7 @@ except ImportError:
     validate_all_paths = _pv_mod.validate_all_paths
 
 
-def compute_basic_statistics(values: List[float]) -> Dict[str, Any]:
+def compute_basic_statistics(values: list[float]) -> dict[str, Any]:
     """Compute basic descriptive statistics."""
     if not values:
         return {
@@ -86,9 +90,9 @@ def compute_basic_statistics(values: List[float]) -> Dict[str, Any]:
 
 
 def compute_percentiles(
-    values: List[float],
-    percentiles: List[float] = None
-) -> Dict[str, float]:
+    values: list[float],
+    percentiles: list[float] = None
+) -> dict[str, float]:
     """Compute specified percentiles."""
     if percentiles is None:
         percentiles = [0, 25, 50, 75, 100]
@@ -112,7 +116,7 @@ def compute_percentiles(
     return result
 
 
-def compute_median(values: List[float]) -> Optional[float]:
+def compute_median(values: list[float]) -> float | None:
     """Compute median value."""
     if not values:
         return None
@@ -126,7 +130,7 @@ def compute_median(values: List[float]) -> Optional[float]:
         return sorted_vals[n // 2]
 
 
-def compute_skewness(values: List[float], mean: float, std: float) -> Optional[float]:
+def compute_skewness(values: list[float], mean: float, std: float) -> float | None:
     """Compute skewness (third standardized moment).
 
     Uses the population formula (biased estimator) consistent with numpy/scipy
@@ -151,7 +155,7 @@ def compute_skewness(values: List[float], mean: float, std: float) -> Optional[f
     return m3 / (pop_std ** 3)
 
 
-def compute_kurtosis(values: List[float], mean: float, std: float) -> Optional[float]:
+def compute_kurtosis(values: list[float], mean: float, std: float) -> float | None:
     """Compute excess kurtosis (fourth standardized moment - 3).
 
     Uses the population formula (biased estimator) consistent with numpy/scipy
@@ -177,11 +181,11 @@ def compute_kurtosis(values: List[float], mean: float, std: float) -> Optional[f
 
 
 def compute_histogram(
-    values: List[float],
+    values: list[float],
     num_bins: int = 50,
-    range_min: Optional[float] = None,
-    range_max: Optional[float] = None
-) -> Dict[str, Any]:
+    range_min: float | None = None,
+    range_max: float | None = None
+) -> dict[str, Any]:
     """Compute histogram of values."""
     if not values:
         return {"bins": [], "counts": [], "densities": []}
@@ -223,9 +227,9 @@ def compute_histogram(
 
 
 def detect_distribution_type(
-    values: List[float],
-    histogram: Dict[str, Any]
-) -> Dict[str, Any]:
+    values: list[float],
+    histogram: dict[str, Any]
+) -> dict[str, Any]:
     """Attempt to classify distribution type."""
     if not values:
         return {"type": "unknown", "confidence": 0}
@@ -235,7 +239,6 @@ def detect_distribution_type(
         return {"type": "unknown", "confidence": 0}
 
     n_bins = len(counts)
-    total = sum(counts)
 
     # Find peaks (including edge bins)
     peaks = []
@@ -359,13 +362,13 @@ def _parse_region_condition(condition: str) -> Callable[..., bool]:
     return condition_fn
 
 
-def _get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
+def _get_grid_spacing(data: dict[str, Any], shape: list[int]) -> dict[str, float]:
     """Extract or compute grid spacing from data metadata.
 
     Looks for explicit ``dx``/``dy``/``dz`` keys, falls back to
     ``Lx``/``Ly``/``Lz`` divided by ``(N-1)``, and defaults to ``1.0``.
     """
-    spacing: Dict[str, float] = {}
+    spacing: dict[str, float] = {}
 
     for key in ["dx", "dy", "dz"]:
         if key in data:
@@ -387,9 +390,9 @@ def _get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float
 
 def build_region_mask(
     condition_fn: Callable[..., bool],
-    shape: List[int],
-    spacing: Dict[str, float],
-) -> List:
+    shape: list[int],
+    spacing: dict[str, float],
+) -> list:
     """Build a boolean mask matching *shape* by evaluating *condition_fn*.
 
     Coordinates are computed with a cell-center convention:
@@ -428,22 +431,22 @@ def build_region_mask(
 
 
 def compute_regional_statistics(
-    field: List,
-    region_mask: Optional[List] = None
-) -> Dict[str, Any]:
+    field: list,
+    region_mask: list | None = None
+) -> dict[str, Any]:
     """Compute statistics for a region of the field."""
     flat = flatten_field(field)
 
     if region_mask:
         flat_mask = flatten_field(region_mask)
-        values = [v for v, m in zip(flat, flat_mask) if m]
+        values = [v for v, m in zip(flat, flat_mask, strict=True) if m]
     else:
         values = flat
 
     return compute_basic_statistics(values)
 
 
-def analyze_spatial_variation(field: List) -> Dict[str, Any]:
+def analyze_spatial_variation(field: list) -> dict[str, Any]:
     """Analyze spatial variation of field."""
     shape = get_field_shape(field)
 
@@ -481,8 +484,16 @@ def analyze_spatial_variation(field: List) -> Dict[str, Any]:
                 "mean_range": row_var["range"],
                 "std": row_var["std"]
             },
-            "is_x_uniform": col_var["std"] < 0.01 * abs(col_var["mean"]) if col_var["mean"] else True,
-            "is_y_uniform": row_var["std"] < 0.01 * abs(row_var["mean"]) if row_var["mean"] else True
+            "is_x_uniform": (
+                col_var["std"] < 0.01 * abs(col_var["mean"])
+                if col_var["mean"]
+                else True
+            ),
+            "is_y_uniform": (
+                row_var["std"] < 0.01 * abs(row_var["mean"])
+                if row_var["mean"]
+                else True
+            ),
         }
 
     return {"dimensions": len(shape), "spatial_analysis": "not_implemented"}

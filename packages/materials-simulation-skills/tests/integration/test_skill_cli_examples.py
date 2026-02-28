@@ -20,7 +20,9 @@ SKILLS = REPO_ROOT / "skills"
 MONOREPO_ROOT = REPO_ROOT.parent.parent
 
 
-def run_script(script_path: Path, args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
+def run_script(
+    script_path: Path, args: list[str], cwd: Path | None = None
+) -> subprocess.CompletedProcess:
     """Run a Python script with the given arguments."""
     cmd = [sys.executable, str(script_path)] + args
     return subprocess.run(
@@ -69,7 +71,10 @@ class TestMeshGenerationCLI(unittest.TestCase):
         """Test: python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --dz 0.1 --json"""
         script = SKILLS / "core-numerical/mesh-generation/scripts/mesh_quality.py"
         result = run_script(script, ["--dx", "1.0", "--dy", "0.1", "--dz", "0.1", "--json"])
-        self.assertEqual(result.returncode, 0, f"mesh_quality.py high aspect failed: {result.stderr}")
+        self.assertEqual(
+            result.returncode, 0,
+            f"mesh_quality.py high aspect failed: {result.stderr}",
+        )
         data = json.loads(result.stdout)
         results = data.get("results", data)
         self.assertIn("aspect_ratio", results)
@@ -81,11 +86,14 @@ class TestTimeSteppingCLI(unittest.TestCase):
     """Test CLI examples from time-stepping SKILL.md."""
 
     def test_timestep_planner_with_ramping(self):
-        """Test: python3 scripts/timestep_planner.py --dt-target 1e-4 --dt-limit 2e-4 --safety 0.8 --ramp-steps 10 --json"""
+        """Test timestep_planner.py with ramping parameters."""
         script = SKILLS / "core-numerical/time-stepping/scripts/timestep_planner.py"
         result = run_script(
             script,
-            ["--dt-target", "1e-4", "--dt-limit", "2e-4", "--safety", "0.8", "--ramp-steps", "10", "--json"]
+            [
+                "--dt-target", "1e-4", "--dt-limit", "2e-4",
+                "--safety", "0.8", "--ramp-steps", "10", "--json",
+            ]
         )
         self.assertEqual(result.returncode, 0, f"timestep_planner.py failed: {result.stderr}")
         data = json.loads(result.stdout)
@@ -106,7 +114,7 @@ class TestTimeSteppingCLI(unittest.TestCase):
         self.assertIn("output_times", results)
 
     def test_checkpoint_planner(self):
-        """Test: python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --max-lost-time 1800 --json"""
+        """Test checkpoint_planner.py with run-time parameters."""
         script = SKILLS / "core-numerical/time-stepping/scripts/checkpoint_planner.py"
         result = run_script(
             script,
@@ -241,7 +249,10 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
 
     def test_bottleneck_detector(self):
         """Test bottleneck detection with sample profile data."""
-        script = SKILLS / "simulation-workflow/performance-profiling/scripts/bottleneck_detector.py"
+        script = SKILLS / (
+            "simulation-workflow/performance-profiling"
+            "/scripts/bottleneck_detector.py"
+        )
         timing_data = create_test_input({
             "solver": 80.0,
             "assembly": 15.0,
@@ -249,7 +260,10 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
         })
         try:
             result = run_script(script, ["--timing", str(timing_data), "--json"])
-            self.assertEqual(result.returncode, 0, f"bottleneck_detector.py failed: {result.stderr}")
+            self.assertEqual(
+                result.returncode, 0,
+                f"bottleneck_detector.py failed: {result.stderr}",
+            )
             data = json.loads(result.stdout)
             results = data.get("results", data)
             self.assertIn("bottlenecks", results)
@@ -262,11 +276,17 @@ class TestPostProcessingCLI(unittest.TestCase):
 
     def test_statistical_analyzer(self):
         """Test statistical analysis."""
-        script = SKILLS / "simulation-workflow/post-processing/scripts/statistical_analyzer.py"
+        script = SKILLS / (
+            "simulation-workflow/post-processing"
+            "/scripts/statistical_analyzer.py"
+        )
         field_data = create_test_input({"phi": [1.0, 2.0, 3.0, 4.0, 5.0]})
         try:
             result = run_script(script, ["--input", str(field_data), "--field", "phi", "--json"])
-            self.assertEqual(result.returncode, 0, f"statistical_analyzer.py failed: {result.stderr}")
+            self.assertEqual(
+                result.returncode, 0,
+                f"statistical_analyzer.py failed: {result.stderr}",
+            )
             data = json.loads(result.stdout)
             self.assertIn("basic_statistics", data)
         finally:
@@ -274,15 +294,25 @@ class TestPostProcessingCLI(unittest.TestCase):
 
     def test_time_series_analyzer(self):
         """Test time series analysis."""
-        script = SKILLS / "simulation-workflow/post-processing/scripts/time_series_analyzer.py"
+        script = SKILLS / (
+            "simulation-workflow/post-processing"
+            "/scripts/time_series_analyzer.py"
+        )
         ts_data = create_test_input({"time": [0, 1, 2, 3, 4], "energy": [5.0, 3.0, 2.0, 1.5, 1.2]})
         try:
             result = run_script(script, ["--input", str(ts_data), "--quantity", "energy", "--json"])
-            self.assertEqual(result.returncode, 0, f"time_series_analyzer.py failed: {result.stderr}")
+            self.assertEqual(
+                result.returncode, 0,
+                f"time_series_analyzer.py failed: {result.stderr}",
+            )
             data = json.loads(result.stdout)
             results = data.get("results", data)
             # Check for either 'trend' or 'monotonicity' or 'convergence'
-            self.assertTrue("trend" in results or "monotonicity" in results or "convergence" in results)
+            self.assertTrue(
+                "trend" in results
+                or "monotonicity" in results
+                or "convergence" in results
+            )
         finally:
             ts_data.unlink(missing_ok=True)
 
@@ -307,11 +337,18 @@ class TestSimulationOrchestratorCLI(unittest.TestCase):
                         "--json"
                     ]
                 )
-                self.assertEqual(result.returncode, 0, f"sweep_generator.py failed: {result.stderr}")
+                self.assertEqual(
+                    result.returncode, 0,
+                    f"sweep_generator.py failed: {result.stderr}",
+                )
                 data = json.loads(result.stdout)
                 results = data.get("results", data)
                 # Check for either 'configs_generated' or 'configs' or 'total_runs'
-                self.assertTrue("configs_generated" in results or "configs" in results or "total_runs" in results)
+                self.assertTrue(
+                    "configs_generated" in results
+                    or "configs" in results
+                    or "total_runs" in results
+                )
             finally:
                 base_config.unlink(missing_ok=True)
 

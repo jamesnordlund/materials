@@ -6,10 +6,9 @@ import argparse
 import json
 import re
 import sys
-from typing import Dict, List, Optional, Tuple
 
 
-def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple[str, float]]:
+def parse_timing_log(log_path: str, pattern: str | None = None) -> list[tuple[str, float]]:
     """
     Parse simulation log file and extract timing entries.
     
@@ -34,7 +33,7 @@ def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple
     malformed_count = 0
     
     try:
-        with open(log_path, 'r', encoding='utf-8') as f:
+        with open(log_path, encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -54,13 +53,14 @@ def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple
                         except (ValueError, IndexError):
                             malformed_count += 1
                 
-                if not matched and any(keyword in line.lower() for keyword in ['time', 'phase', 'took']):
+                keywords = ['time', 'phase', 'took']
+                if not matched and any(kw in line.lower() for kw in keywords):
                     malformed_count += 1
     
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Log file not found: {log_path}")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"Log file not found: {log_path}") from err
     except Exception as e:
-        raise ValueError(f"Error reading log file: {e}")
+        raise ValueError(f"Error reading log file: {e}") from e
     
     if malformed_count > 0:
         print(f"Warning: Skipped {malformed_count} malformed timing entries", file=sys.stderr)
@@ -68,7 +68,7 @@ def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple
     return entries
 
 
-def aggregate_timings(entries: List[Tuple[str, float]]) -> Dict[str, Dict[str, float]]:
+def aggregate_timings(entries: list[tuple[str, float]]) -> dict[str, dict[str, float]]:
     """
     Aggregate timing entries by phase.
     
@@ -81,7 +81,7 @@ def aggregate_timings(entries: List[Tuple[str, float]]) -> Dict[str, Dict[str, f
     if not entries:
         return {}
     
-    phase_times: Dict[str, List[float]] = {}
+    phase_times: dict[str, list[float]] = {}
     for phase, time_val in entries:
         if phase not in phase_times:
             phase_times[phase] = []
@@ -103,7 +103,7 @@ def aggregate_timings(entries: List[Tuple[str, float]]) -> Dict[str, Dict[str, f
     return aggregated
 
 
-def identify_slowest_phases(aggregated: Dict[str, Dict[str, float]], top_n: int = 5) -> List[str]:
+def identify_slowest_phases(aggregated: dict[str, dict[str, float]], top_n: int = 5) -> list[str]:
     """
     Identify the slowest computational phases.
     
@@ -165,8 +165,8 @@ def main():
             }
             print(json.dumps(output, indent=2))
         else:
-            print(f"Timing Analysis Results")
-            print(f"=" * 60)
+            print("Timing Analysis Results")
+            print("=" * 60)
             print(f"Total time: {total_time:.2f}s\n")
             
             if aggregated:

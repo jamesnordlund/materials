@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
 def select_solver(
@@ -14,13 +13,13 @@ def select_solver(
     ill_conditioned: bool,
     complex_valued: bool,
     memory_limited: bool,
-) -> Dict[str, List[str] | str]:
+) -> dict[str, list[str] | str]:
     if size <= 0:
         raise ValueError("size must be positive")
 
-    recommended: List[str] = []
-    alternatives: List[str] = []
-    notes: List[str] = []
+    recommended: list[str] = []
+    alternatives: list[str] = []
+    notes: list[str] = []
 
     large = size >= 200_000
     if symmetric:

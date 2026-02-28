@@ -5,10 +5,9 @@ Memory Profiler - Estimate memory requirements from simulation parameters.
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional
 
 
-def load_parameters(path: str) -> Dict:
+def load_parameters(path: str) -> dict:
     """
     Load simulation parameters from JSON file.
     
@@ -19,7 +18,7 @@ def load_parameters(path: str) -> Dict:
         Parameter dictionary
     """
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             params = json.load(f)
         
         # Validate required fields
@@ -34,13 +33,13 @@ def load_parameters(path: str) -> Dict:
         
         return params
     
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Parameters file not found: {path}")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"Parameters file not found: {path}") from err
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON format: {e}")
+        raise ValueError(f"Invalid JSON format: {e}") from e
 
 
-def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
+def estimate_field_memory(mesh: dict, fields: dict) -> float:
     """
     Estimate memory for field variables.
     
@@ -59,7 +58,7 @@ def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
     
     # Calculate memory for all fields
     total_bytes = 0
-    for field_name, field_spec in fields.items():
+    for _field_name, field_spec in fields.items():
         components = field_spec.get('components', 1)
         bytes_per_value = field_spec.get('bytes_per_value', 8)  # default: double precision
         total_bytes += mesh_points * components * bytes_per_value
@@ -68,7 +67,7 @@ def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
     return total_bytes / (1024 ** 3)
 
 
-def estimate_solver_memory(mesh: Dict, solver: Dict) -> float:
+def estimate_solver_memory(mesh: dict, solver: dict) -> float:
     """
     Estimate memory for solver workspace.
     
@@ -86,7 +85,6 @@ def estimate_solver_memory(mesh: Dict, solver: Dict) -> float:
     mesh_points = nx * ny * nz
     
     # Get workspace multiplier based on solver type
-    solver_type = solver.get('type', 'iterative')
     workspace_multiplier = solver.get('workspace_multiplier', 5)
     
     # Estimate workspace (typically several vectors of size mesh_points)
@@ -97,7 +95,7 @@ def estimate_solver_memory(mesh: Dict, solver: Dict) -> float:
     return workspace_bytes / (1024 ** 3)
 
 
-def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> Dict:
+def compute_total_memory(params: dict, available_gb: float | None = None) -> dict:
     """
     Compute total memory requirements.
     
@@ -129,9 +127,15 @@ def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> 
     warnings = []
     if available_gb is not None:
         if total_memory_gb > available_gb:
-            warnings.append(f"Total memory ({total_memory_gb:.2f} GB) exceeds available memory ({available_gb:.2f} GB)")
+            warnings.append(
+                f"Total memory ({total_memory_gb:.2f} GB) exceeds"
+                f" available memory ({available_gb:.2f} GB)"
+            )
         elif total_memory_gb > 0.8 * available_gb:
-            warnings.append(f"Memory usage ({total_memory_gb:.2f} GB) is high (>80% of available {available_gb:.2f} GB)")
+            warnings.append(
+                f"Memory usage ({total_memory_gb:.2f} GB) is high"
+                f" (>80% of available {available_gb:.2f} GB)"
+            )
     
     return {
         'mesh_points': mesh_points,
@@ -147,7 +151,10 @@ def main():
     parser = argparse.ArgumentParser(
         description='Estimate memory requirements from simulation parameters'
     )
-    parser.add_argument('--params', required=True, help='Path to JSON file with simulation parameters')
+    parser.add_argument(
+        '--params', required=True,
+        help='Path to JSON file with simulation parameters',
+    )
     parser.add_argument('--available-gb', type=float, help='Available system memory in GB')
     parser.add_argument('--json', action='store_true', help='Output in JSON format')
     
@@ -171,8 +178,8 @@ def main():
             }
             print(json.dumps(output, indent=2))
         else:
-            print(f"Memory Profile")
-            print(f"=" * 60)
+            print("Memory Profile")
+            print("=" * 60)
             print(f"Mesh points: {profile['mesh_points']:,}")
             print(f"Field memory: {profile['field_memory_gb']:.3f} GB")
             print(f"Solver workspace: {profile['solver_workspace_gb']:.3f} GB")
@@ -180,7 +187,7 @@ def main():
             print(f"Per-process memory: {profile['per_process_gb']:.3f} GB")
             
             if profile['warnings']:
-                print(f"\nWarnings:")
+                print("\nWarnings:")
                 for warning in profile['warnings']:
                     print(f"  - {warning}")
     

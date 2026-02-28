@@ -4,13 +4,13 @@ import argparse
 import json
 import math
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def analyze_convergence(
-    residuals: List[float],
+    residuals: list[float],
     tolerance: float = 1e-10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze residual history to classify convergence behavior.
 
     Args:
@@ -70,7 +70,10 @@ def analyze_convergence(
                     "convergence_type": "stagnated",
                     "estimated_rate": None,
                     "diagnosis": "Residual has stagnated without reaching tolerance.",
-                    "recommended_action": "Improve preconditioner, check for near-singularity, or use different solver.",
+                    "recommended_action": (
+                        "Improve preconditioner, check for near-singularity,"
+                        " or use different solver."
+                    ),
                 }
 
     # Estimate convergence rate from log-residuals
@@ -143,7 +146,10 @@ def analyze_convergence(
         "quadratic": "Continue with current solver; convergence is optimal.",
         "superlinear": "Current setup is effective; monitor for stagnation.",
         "linear": "Consider stronger preconditioner or switch to Newton if Jacobian available.",
-        "sublinear": "Switch to Newton method, improve globalization, or check problem formulation.",
+        "sublinear": (
+            "Switch to Newton method, improve globalization,"
+            " or check problem formulation."
+        ),
         "unknown": "Gather more iterations for analysis.",
     }
 
@@ -203,7 +209,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "residuals": residuals,
             "tolerance": args.tolerance,

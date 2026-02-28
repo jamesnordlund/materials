@@ -5,7 +5,8 @@ This script initializes campaign tracking structures and provides
 status summaries for multi-simulation campaigns.
 
 Usage:
-    python campaign_manager.py --action init --config-dir ./sweep --command "python sim.py --config {config}"
+    python campaign_manager.py --action init --config-dir ./sweep \
+        --command "python sim.py --config {config}"
     python campaign_manager.py --action status --config-dir ./sweep
 
 Output (JSON):
@@ -24,7 +25,7 @@ import sys
 import time
 import uuid
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # File locking support (POSIX only)
 try:
@@ -48,16 +49,16 @@ def generate_campaign_id() -> str:
     return f"campaign_{uuid.uuid4().hex[:8]}"
 
 
-def load_manifest(config_dir: str) -> Dict[str, Any]:
+def load_manifest(config_dir: str) -> dict[str, Any]:
     """Load campaign manifest from config directory."""
     manifest_path = os.path.join(config_dir, "manifest.json")
     if not os.path.exists(manifest_path):
         raise ValueError(f"Manifest not found: {manifest_path}")
-    with open(manifest_path, "r") as f:
+    with open(manifest_path) as f:
         return json.load(f)
 
 
-def _load_campaign_locked(campaign_path: str) -> Dict[str, Any]:
+def _load_campaign_locked(campaign_path: str) -> dict[str, Any]:
     """Load campaign.json with advisory file locking.
 
     Uses shared lock (LOCK_SH) to allow concurrent readers.
@@ -90,19 +91,19 @@ def _load_campaign_locked(campaign_path: str) -> Dict[str, Any]:
     else:
         _warn_no_fcntl()
         # Fallback for platforms without fcntl (e.g., Windows)
-        with open(campaign_path, "r") as f:
+        with open(campaign_path) as f:
             return json.load(f)
 
 
-def load_campaign(config_dir: str) -> Dict[str, Any]:
+def load_campaign(config_dir: str) -> dict[str, Any]:
     """Load campaign state from config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     if not os.path.exists(campaign_path):
-        raise ValueError(f"Campaign not initialized. Run with --action init first.")
+        raise ValueError("Campaign not initialized. Run with --action init first.")
     return _load_campaign_locked(campaign_path)
 
 
-def _save_campaign_locked(campaign_path: str, campaign: Dict[str, Any]) -> None:
+def _save_campaign_locked(campaign_path: str, campaign: dict[str, Any]) -> None:
     """Save campaign.json with advisory file locking.
 
     Uses exclusive lock (LOCK_EX) to serialize writers.
@@ -140,15 +141,15 @@ def _save_campaign_locked(campaign_path: str, campaign: Dict[str, Any]) -> None:
             json.dump(campaign, f, indent=2)
 
 
-def save_campaign(config_dir: str, campaign: Dict[str, Any]) -> None:
+def save_campaign(config_dir: str, campaign: dict[str, Any]) -> None:
     """Save campaign state to config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     _save_campaign_locked(campaign_path, campaign)
 
 
 def init_campaign(
-    config_dir: str, command_template: str, output_pattern: Optional[str] = None
-) -> Dict[str, Any]:
+    config_dir: str, command_template: str, output_pattern: str | None = None
+) -> dict[str, Any]:
     """Initialize a new campaign from sweep configurations.
 
     Args:
@@ -193,7 +194,7 @@ def init_campaign(
     return campaign
 
 
-def get_campaign_status(config_dir: str) -> Dict[str, Any]:
+def get_campaign_status(config_dir: str) -> dict[str, Any]:
     """Get current campaign status summary.
 
     Returns:
@@ -235,7 +236,7 @@ def get_campaign_status(config_dir: str) -> Dict[str, Any]:
     }
 
 
-def list_jobs(config_dir: str, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+def list_jobs(config_dir: str, status_filter: str | None = None) -> list[dict[str, Any]]:
     """List jobs in campaign, optionally filtered by status.
 
     Args:

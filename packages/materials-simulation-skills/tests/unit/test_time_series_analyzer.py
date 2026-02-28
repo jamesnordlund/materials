@@ -148,7 +148,7 @@ class TestTimeSeriesAnalyzer(unittest.TestCase):
     def test_compute_convergence_rate_stalled(self):
         """Test convergence rate estimation for stalled convergence."""
         values = [1.0] * 10  # No change
-        result = self.mod.compute_convergence_rate(values)
+        self.mod.compute_convergence_rate(values)
         # Should recognize as stalled or unknown
 
     def test_extract_quantity(self):

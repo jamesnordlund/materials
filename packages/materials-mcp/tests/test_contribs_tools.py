@@ -299,7 +299,6 @@ class TestContribsGetTableMocked(unittest.TestCase):
     @patch("mcp_materials.contribs_tools.ContribsClient")
     def test_get_table(self, MockClient):
         import pandas as pd
-
         from mcp_materials.contribs_tools import contribs_get_table
 
         client = _mock_contribs_client()
@@ -317,7 +316,6 @@ class TestContribsGetTableMocked(unittest.TestCase):
     @patch("mcp_materials.contribs_tools.ContribsClient")
     def test_table_truncation(self, MockClient):
         import pandas as pd
-
         from mcp_materials.contribs_tools import contribs_get_table
 
         client = _mock_contribs_client()
@@ -337,7 +335,6 @@ class TestContribsGetTableMocked(unittest.TestCase):
     def test_table_all_rows(self, MockClient):
         """T4: max_rows=-1 returns all rows without truncation."""
         import pandas as pd
-
         from mcp_materials.contribs_tools import contribs_get_table
 
         client = _mock_contribs_client()
@@ -356,8 +353,7 @@ class TestContribsGetTableMocked(unittest.TestCase):
     def test_table_max_rows_absolute_cap(self, MockClient):
         """H6: max_rows=-1 with very large table is capped at MAX_ROWS_ABSOLUTE."""
         import pandas as pd
-
-        from mcp_materials.contribs_tools import contribs_get_table, MAX_ROWS_ABSOLUTE
+        from mcp_materials.contribs_tools import MAX_ROWS_ABSOLUTE, contribs_get_table
 
         client = _mock_contribs_client()
         MockClient.return_value = client
@@ -380,8 +376,7 @@ class TestContribsGetTableMocked(unittest.TestCase):
     def test_table_max_rows_explicit_cap(self, MockClient):
         """H6: Explicit max_rows > MAX_ROWS_ABSOLUTE is capped."""
         import pandas as pd
-
-        from mcp_materials.contribs_tools import contribs_get_table, MAX_ROWS_ABSOLUTE
+        from mcp_materials.contribs_tools import MAX_ROWS_ABSOLUTE, contribs_get_table
 
         client = _mock_contribs_client()
         MockClient.return_value = client
@@ -643,6 +638,7 @@ class TestContribsEndToEndErrorHandling(unittest.TestCase):
         import sys
 
         from mcp_materials.contribs_tools import contribs_get_project
+
         from tests.conftest import FakeHTTPError
 
         client = _mock_contribs_client()
@@ -663,6 +659,7 @@ class TestContribsEndToEndErrorHandling(unittest.TestCase):
         import sys
 
         from mcp_materials.contribs_tools import contribs_get_project
+
         from tests.conftest import FakeHTTPError
 
         client = _mock_contribs_client()

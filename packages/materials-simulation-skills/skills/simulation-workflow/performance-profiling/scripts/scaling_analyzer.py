@@ -5,10 +5,9 @@ Scaling Analyzer - Analyze strong and weak scaling from multi-run data.
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional
 
 
-def load_scaling_data(path: str) -> List[Dict]:
+def load_scaling_data(path: str) -> list[dict]:
     """
     Load scaling data from JSON file.
     
@@ -19,7 +18,7 @@ def load_scaling_data(path: str) -> List[Dict]:
         List of run configurations
     """
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             data = json.load(f)
         
         if 'runs' not in data:
@@ -43,13 +42,13 @@ def load_scaling_data(path: str) -> List[Dict]:
         
         return runs
     
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Scaling data file not found: {path}")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"Scaling data file not found: {path}") from err
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON format: {e}")
+        raise ValueError(f"Invalid JSON format: {e}") from e
 
 
-def compute_strong_scaling(runs: List[Dict]) -> Dict:
+def compute_strong_scaling(runs: list[dict]) -> dict:
     """
     Compute strong scaling efficiency (fixed problem size, varying processors).
     
@@ -107,7 +106,7 @@ def compute_strong_scaling(runs: List[Dict]) -> Dict:
     }
 
 
-def compute_weak_scaling(runs: List[Dict]) -> Dict:
+def compute_weak_scaling(runs: list[dict]) -> dict:
     """
     Compute weak scaling efficiency (constant work per processor, varying processors).
     
@@ -198,7 +197,7 @@ def main():
             print(json.dumps(output, indent=2))
         else:
             print(f"{args.type.capitalize()} Scaling Analysis")
-            print(f"=" * 60)
+            print("=" * 60)
             print(f"Baseline: {analysis['baseline']['processors']} processors, "
                   f"{analysis['baseline']['time']:.2f}s\n")
             
@@ -210,7 +209,10 @@ def main():
             
             print(f"\nAverage efficiency: {analysis['average_efficiency']:.3f}")
             if analysis['efficiency_threshold_processors']:
-                print(f"Efficiency drops below 0.70 at {analysis['efficiency_threshold_processors']} processors")
+                threshold = analysis['efficiency_threshold_processors']
+                print(
+                    f"Efficiency drops below 0.70 at {threshold} processors"
+                )
             else:
                 print("Efficiency remains above 0.70 for all configurations")
     

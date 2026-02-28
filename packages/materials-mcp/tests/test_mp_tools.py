@@ -19,6 +19,7 @@ from mcp_materials.mp_tools import (
     search_by_elements,
     search_materials,
 )
+
 from tests.conftest import _make_summary_doc, _mock_mprester
 
 # =============================================================================

@@ -4,16 +4,15 @@ import json
 import math
 import re
 import sys
-from typing import Dict, List, Optional, Tuple
 
 
 def parse_log(
     text: str,
     residual_pattern: str,
     dt_pattern: str,
-) -> Tuple[List[float], List[float]]:
-    residuals: List[float] = []
-    dts: List[float] = []
+) -> tuple[list[float], list[float]]:
+    residuals: list[float] = []
+    dts: list[float] = []
     res_re = re.compile(residual_pattern, re.IGNORECASE)
     dt_re = re.compile(dt_pattern, re.IGNORECASE)
 
@@ -34,19 +33,19 @@ def parse_log(
     return residuals, dts
 
 
-def compute_stats(values: List[float]) -> Dict[str, Optional[float]]:
+def compute_stats(values: list[float]) -> dict[str, float | None]:
     if not values:
         return {"min": None, "max": None, "last": None}
     return {"min": min(values), "max": max(values), "last": values[-1]}
 
 
 def monitor(
-    residuals: List[float],
-    dts: List[float],
+    residuals: list[float],
+    dts: list[float],
     residual_growth: float,
     dt_drop: float,
-) -> Dict[str, object]:
-    alerts: List[str] = []
+) -> dict[str, object]:
+    alerts: list[str] = []
     if residuals:
         # Check for NaN residuals first (indicates numerical breakdown)
         for i, res in enumerate(residuals):
@@ -61,9 +60,8 @@ def monitor(
             if residuals[i - 1] > 0 and residuals[i] / residuals[i - 1] > residual_growth:
                 alerts.append("Residual increased > threshold.")
                 break
-    if dts:
-        if min(dts) > 0 and max(dts) / min(dts) > dt_drop:
-            alerts.append("Time step reduced > threshold.")
+    if dts and min(dts) > 0 and max(dts) / min(dts) > dt_drop:
+        alerts.append("Time step reduced > threshold.")
 
     return {
         "alerts": alerts,
@@ -107,7 +105,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     try:
-        with open(args.log, "r", encoding="utf-8") as handle:
+        with open(args.log, encoding="utf-8") as handle:
             text = handle.read()
         residuals, dts = parse_log(text, args.residual_pattern, args.dt_pattern)
         result = monitor(residuals, dts, args.residual_growth, args.dt_drop)

@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
 def advise_preconditioner(
@@ -11,12 +10,12 @@ def advise_preconditioner(
     ill_conditioned: bool,
     saddle_point: bool,
     symmetric: bool,
-) -> Dict[str, List[str] | str]:
+) -> dict[str, list[str] | str]:
     if matrix_type not in {"spd", "symmetric-indefinite", "nonsymmetric"}:
         raise ValueError("matrix_type must be spd, symmetric-indefinite, or nonsymmetric")
 
-    suggested: List[str] = []
-    notes: List[str] = []
+    suggested: list[str] = []
+    notes: list[str] = []
 
     if saddle_point:
         suggested.append("Block preconditioner (Schur complement)")

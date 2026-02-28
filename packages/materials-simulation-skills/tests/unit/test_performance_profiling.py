@@ -10,7 +10,8 @@ import unittest
 from tests.unit._utils import load_module
 
 try:
-    from hypothesis import given, strategies as st, settings
+    from hypothesis import given, settings
+    from hypothesis import strategies as st
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     HYPOTHESIS_AVAILABLE = False
@@ -19,7 +20,8 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
-    settings = lambda **kwargs: lambda func: func
+    def settings(**kwargs):
+        return lambda func: func
     st = None
 
 _SCRIPTS = "skills/simulation-workflow/performance-profiling/scripts/"
@@ -383,8 +385,14 @@ if HYPOTHESIS_AVAILABLE:
         @given(
             timing_entries=st.lists(
                 st.tuples(
-                    st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
-                    st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
+                    st.text(
+                        min_size=1, max_size=50,
+                        alphabet=st.characters(blacklist_categories=('Cs',)),
+                    ),
+                    st.floats(
+                        min_value=0.001, max_value=10000.0,
+                        allow_nan=False, allow_infinity=False,
+                    )
                 ),
                 min_size=1,
                 max_size=100
@@ -431,8 +439,14 @@ if HYPOTHESIS_AVAILABLE:
         @given(
             timing_entries=st.lists(
                 st.tuples(
-                    st.text(min_size=1, max_size=50, alphabet=st.characters(blacklist_categories=('Cs',))),
-                    st.floats(min_value=0.001, max_value=10000.0, allow_nan=False, allow_infinity=False)
+                    st.text(
+                        min_size=1, max_size=50,
+                        alphabet=st.characters(blacklist_categories=('Cs',)),
+                    ),
+                    st.floats(
+                        min_value=0.001, max_value=10000.0,
+                        allow_nan=False, allow_infinity=False,
+                    )
                 ),
                 min_size=1,
                 max_size=100
@@ -454,7 +468,11 @@ if HYPOTHESIS_AVAILABLE:
             slowest = self.module.identify_slowest_phases(aggregated, top_n=3)
 
             # Get all phases sorted by total time
-            all_phases_sorted = sorted(aggregated.items(), key=lambda x: x[1]['total_time'], reverse=True)
+            all_phases_sorted = sorted(
+                aggregated.items(),
+                key=lambda x: x[1]['total_time'],
+                reverse=True,
+            )
             expected_slowest = [phase for phase, _ in all_phases_sorted[:3]]
 
             # Verify slowest phases match expected
@@ -474,7 +492,10 @@ if HYPOTHESIS_AVAILABLE:
             runs=st.lists(
                 st.tuples(
                     st.integers(min_value=1, max_value=1024),  # processors
-                    st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
+                    st.floats(
+                        min_value=0.1, max_value=10000.0,
+                        allow_nan=False, allow_infinity=False,
+                    )  # time
                 ),
                 min_size=2,
                 max_size=20,
@@ -514,7 +535,10 @@ if HYPOTHESIS_AVAILABLE:
             runs=st.lists(
                 st.tuples(
                     st.integers(min_value=1, max_value=1024),  # processors
-                    st.floats(min_value=0.1, max_value=10000.0, allow_nan=False, allow_infinity=False)  # time
+                    st.floats(
+                        min_value=0.1, max_value=10000.0,
+                        allow_nan=False, allow_infinity=False,
+                    )  # time
                 ),
                 min_size=2,
                 max_size=20,

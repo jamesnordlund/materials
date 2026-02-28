@@ -3,16 +3,15 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, Optional
 
 
 def compute_interval(
     run_time: float,
     checkpoint_cost: float,
     max_lost_time: float,
-    mtbf: Optional[float],
+    mtbf: float | None,
     formula: str = "young",
-) -> Dict[str, object]:
+) -> dict[str, object]:
     if run_time <= 0:
         raise ValueError("run_time must be positive")
     if checkpoint_cost <= 0:

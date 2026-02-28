@@ -3,7 +3,7 @@
 import argparse
 import json
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 
 def select_solver(
@@ -15,7 +15,7 @@ def select_solver(
     constraint_type: str,
     memory_limited: bool,
     high_accuracy: bool,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     """Select nonlinear solver based on problem characteristics.
 
     Args:
@@ -38,9 +38,9 @@ def select_solver(
     if constraint_type not in valid_constraints:
         raise ValueError(f"constraint_type must be one of {valid_constraints}")
 
-    recommended: List[str] = []
-    alternatives: List[str] = []
-    notes: List[str] = []
+    recommended: list[str] = []
+    alternatives: list[str] = []
+    notes: list[str] = []
 
     large_problem = problem_size >= 10_000
 
@@ -189,7 +189,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "jacobian_available": args.jacobian_available,
             "jacobian_expensive": args.jacobian_expensive,

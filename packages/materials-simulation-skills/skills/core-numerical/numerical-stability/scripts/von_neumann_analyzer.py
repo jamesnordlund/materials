@@ -3,7 +3,6 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -43,10 +42,10 @@ def compute_amplification(
     coeffs: np.ndarray,
     dx: float,
     nk: int,
-    offset: Optional[int],
-    kmin: Optional[float],
-    kmax: Optional[float],
-) -> Dict[str, object]:
+    offset: int | None,
+    kmin: float | None,
+    kmax: float | None,
+) -> dict[str, object]:
     if dx <= 0:
         raise ValueError("dx must be positive")
     if nk <= 1:

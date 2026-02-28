@@ -3,17 +3,16 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, List, Optional, Tuple
 
 
-def parse_list(raw: str) -> List[float]:
+def parse_list(raw: str) -> list[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("value list must be a comma-separated list")
     return [float(p) for p in parts]
 
 
-def compute_norms(vec: List[float]) -> Dict[str, float]:
+def compute_norms(vec: list[float]) -> dict[str, float]:
     if not vec:
         raise ValueError("vector must be non-empty")
     if any(not math.isfinite(v) for v in vec):
@@ -24,7 +23,7 @@ def compute_norms(vec: List[float]) -> Dict[str, float]:
     return {"l1": l1, "l2": l2, "linf": linf}
 
 
-def select_norm_value(norms: Dict[str, float], norm: str) -> float:
+def select_norm_value(norms: dict[str, float], norm: str) -> float:
     if norm == "l1":
         return norms["l1"]
     if norm == "l2":
@@ -35,14 +34,14 @@ def select_norm_value(norms: Dict[str, float], norm: str) -> float:
 
 
 def compute_residual_metrics(
-    residual: List[float],
-    rhs: Optional[List[float]],
-    initial: Optional[List[float]],
+    residual: list[float],
+    rhs: list[float] | None,
+    initial: list[float] | None,
     abs_tol: float,
     rel_tol: float,
     norm: str,
     require_both: bool,
-) -> Tuple[Dict[str, float], Optional[Dict[str, float]], Optional[Dict[str, float]], Dict[str, object]]:
+) -> tuple[dict[str, float], dict[str, float] | None, dict[str, float] | None, dict[str, object]]:
     if abs_tol < 0 or rel_tol < 0:
         raise ValueError("abs_tol and rel_tol must be non-negative")
 
@@ -76,7 +75,10 @@ def compute_residual_metrics(
     if converged_rel is None:
         converged = converged_abs
     else:
-        converged = converged_abs and converged_rel if require_both else converged_abs or converged_rel
+        if require_both:
+            converged = converged_abs and converged_rel
+        else:
+            converged = converged_abs or converged_rel
 
     meta = {
         "norm_used": norm,

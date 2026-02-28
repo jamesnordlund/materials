@@ -7,7 +7,8 @@ in time series data from simulation history files.
 
 Usage:
     python time_series_analyzer.py --input history.json --quantity energy --json
-    python time_series_analyzer.py --input history.json --quantity residual --detect-steady-state --json
+    python time_series_analyzer.py --input history.json \
+        --quantity residual --detect-steady-state --json
 """
 
 import argparse
@@ -15,22 +16,23 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, load_csv_file
+    from ._utils import load_csv_file, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
     load_csv_file = _utils.load_csv_file
 
 
-def load_time_series(filepath: str) -> Dict[str, Any]:
+def load_time_series(filepath: str) -> dict[str, Any]:
     """Load time series data from file."""
     if filepath.endswith(".json"):
         data = load_json_file(filepath)
@@ -44,7 +46,7 @@ def load_time_series(filepath: str) -> Dict[str, Any]:
         raise ValueError(f"Unsupported format: {filepath}")
 
 
-def extract_quantity(data: Dict[str, Any], quantity: str) -> Optional[List[float]]:
+def extract_quantity(data: dict[str, Any], quantity: str) -> list[float] | None:
     """Extract a quantity time series from data."""
     # Try direct access
     if quantity in data:
@@ -67,7 +69,7 @@ def extract_quantity(data: Dict[str, Any], quantity: str) -> Optional[List[float
     return None
 
 
-def get_time_axis(data: Dict[str, Any]) -> Optional[List[float]]:
+def get_time_axis(data: dict[str, Any]) -> list[float] | None:
     """Get time axis from data."""
     for key in ["time", "t", "timestep", "step", "iteration"]:
         if key in data:
@@ -77,7 +79,7 @@ def get_time_axis(data: Dict[str, Any]) -> Optional[List[float]]:
     return None
 
 
-def compute_statistics(values: List[float]) -> Dict[str, Any]:
+def compute_statistics(values: list[float]) -> dict[str, Any]:
     """Compute basic statistics for a time series."""
     if not values:
         return {
@@ -110,7 +112,7 @@ def compute_statistics(values: List[float]) -> Dict[str, Any]:
     }
 
 
-def compute_moving_average(values: List[float], window: int) -> List[float]:
+def compute_moving_average(values: list[float], window: int) -> list[float]:
     """Compute moving average with given window size."""
     if window < 1:
         window = 1
@@ -127,9 +129,9 @@ def compute_moving_average(values: List[float], window: int) -> List[float]:
 
 
 def compute_rate_of_change(
-    values: List[float],
-    times: Optional[List[float]] = None
-) -> List[float]:
+    values: list[float],
+    times: list[float] | None = None
+) -> list[float]:
     """Compute rate of change (derivative) of time series."""
     if len(values) < 2:
         return []
@@ -138,10 +140,7 @@ def compute_rate_of_change(
     for i in range(1, len(values)):
         if times:
             dt = times[i] - times[i - 1]
-            if dt > 0:
-                rate = (values[i] - values[i - 1]) / dt
-            else:
-                rate = 0.0
+            rate = (values[i] - values[i - 1]) / dt if dt > 0 else 0.0
         else:
             rate = values[i] - values[i - 1]
         rates.append(rate)
@@ -150,10 +149,10 @@ def compute_rate_of_change(
 
 
 def detect_steady_state(
-    values: List[float],
+    values: list[float],
     tolerance: float = 1e-6,
     window: int = 10
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Detect if time series has reached steady state."""
     if len(values) < window:
         return {
@@ -203,7 +202,7 @@ def detect_steady_state(
     }
 
 
-def detect_monotonicity(values: List[float]) -> Dict[str, Any]:
+def detect_monotonicity(values: list[float]) -> dict[str, Any]:
     """Detect if time series is monotonic."""
     if len(values) < 2:
         return {"monotonic": True, "direction": "constant", "violations": 0}
@@ -240,9 +239,9 @@ def detect_monotonicity(values: List[float]) -> Dict[str, Any]:
 
 
 def detect_oscillations(
-    values: List[float],
+    values: list[float],
     threshold: float = 0.01
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Detect oscillations in time series."""
     if len(values) < 3:
         return {"oscillating": False, "zero_crossings": 0}
@@ -277,9 +276,9 @@ def detect_oscillations(
 
 
 def compute_convergence_rate(
-    values: List[float],
-    target: Optional[float] = None
-) -> Dict[str, Any]:
+    values: list[float],
+    target: float | None = None
+) -> dict[str, Any]:
     """Estimate convergence rate from a time series.
 
     Fits a linear regression to log(|value - target|) vs iteration index
@@ -482,13 +481,13 @@ def main():
 
             osc = result["oscillations"]
             if osc["oscillating"]:
-                print(f"\nOscillations detected:")
+                print("\nOscillations detected:")
                 print(f"  Amplitude: {osc['amplitude']:.6g}")
                 print(f"  Frequency: ~{osc['frequency_estimate']:.4f} per step")
 
             conv = result["convergence"]
             if conv["rate"] is not None:
-                print(f"\nConvergence:")
+                print("\nConvergence:")
                 print(f"  Type: {conv['type']}")
                 print(f"  Rate: {conv['rate']:.4f}")
                 if conv.get("target_used") is not None:
@@ -498,7 +497,7 @@ def main():
 
             if "steady_state" in result:
                 ss = result["steady_state"]
-                print(f"\nSteady State:")
+                print("\nSteady State:")
                 print(f"  Reached: {ss['reached']}")
                 if ss["reached"]:
                     print(f"  At index: {ss['index']}")

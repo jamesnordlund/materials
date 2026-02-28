@@ -16,22 +16,23 @@ import math
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, flatten_field
+    from ._utils import flatten_field, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
     flatten_field = _utils.flatten_field
 
 
-def find_data_files(directory: str) -> Dict[str, List[str]]:
+def find_data_files(directory: str) -> dict[str, list[str]]:
     """Find and categorize data files in directory."""
     files = {
         "field_files": [],
@@ -69,7 +70,7 @@ def find_data_files(directory: str) -> Dict[str, List[str]]:
     return files
 
 
-def extract_simulation_info(directory: str, files: Dict[str, List[str]]) -> Dict[str, Any]:
+def extract_simulation_info(directory: str, files: dict[str, list[str]]) -> dict[str, Any]:
     """Extract simulation metadata from config files."""
     info = {
         "config_found": False,
@@ -86,11 +87,8 @@ def extract_simulation_info(directory: str, files: Dict[str, List[str]]) -> Dict
 
             # Extract common parameters
             for key in ["dt", "dx", "dy", "dz", "nx", "ny", "nz"]:
-                if key in config:
-                    if key.startswith("d"):
-                        info["grid"][key] = config[key]
-                    elif key.startswith("n"):
-                        info["grid"][key] = config[key]
+                if key in config and (key.startswith("d") or key.startswith("n")):
+                    info["grid"][key] = config[key]
 
             for key in ["dt", "t_max", "t_end", "n_steps", "max_iterations"]:
                 if key in config:
@@ -106,7 +104,7 @@ def extract_simulation_info(directory: str, files: Dict[str, List[str]]) -> Dict
     return info
 
 
-def analyze_field_files(directory: str, files: List[str]) -> Dict[str, Any]:
+def analyze_field_files(directory: str, files: list[str]) -> dict[str, Any]:
     """Analyze field output files."""
     analysis = {
         "count": len(files),
@@ -158,7 +156,7 @@ def analyze_field_files(directory: str, files: List[str]) -> Dict[str, Any]:
     return analysis
 
 
-def analyze_history_files(directory: str, files: List[str]) -> Dict[str, Any]:
+def analyze_history_files(directory: str, files: list[str]) -> dict[str, Any]:
     """Analyze history/convergence files."""
     analysis = {
         "count": len(files),
@@ -215,9 +213,9 @@ flatten_list = flatten_field
 
 def generate_summary_section(
     directory: str,
-    files: Dict[str, List[str]],
-    sim_info: Dict[str, Any]
-) -> Dict[str, Any]:
+    files: dict[str, list[str]],
+    sim_info: dict[str, Any]
+) -> dict[str, Any]:
     """Generate summary section of report."""
     summary = {
         "directory": directory,
@@ -241,8 +239,8 @@ def generate_summary_section(
 
 
 def generate_statistics_section(
-    field_analysis: Dict[str, Any]
-) -> Dict[str, Any]:
+    field_analysis: dict[str, Any]
+) -> dict[str, Any]:
     """Generate statistics section of report."""
     stats = {
         "field_files_analyzed": field_analysis.get("count", 0),
@@ -257,8 +255,8 @@ def generate_statistics_section(
 
 
 def generate_convergence_section(
-    history_analysis: Dict[str, Any]
-) -> Dict[str, Any]:
+    history_analysis: dict[str, Any]
+) -> dict[str, Any]:
     """Generate convergence section of report."""
     convergence = {
         "quantities_tracked": history_analysis.get("quantities", []),
@@ -280,9 +278,9 @@ def generate_convergence_section(
 
 
 def generate_validation_section(
-    field_analysis: Dict[str, Any],
-    history_analysis: Dict[str, Any]
-) -> Dict[str, Any]:
+    field_analysis: dict[str, Any],
+    history_analysis: dict[str, Any]
+) -> dict[str, Any]:
     """Generate validation section of report."""
     validation = {
         "checks": [],
@@ -320,8 +318,8 @@ def generate_validation_section(
 
 def generate_report(
     directory: str,
-    sections: List[str]
-) -> Dict[str, Any]:
+    sections: list[str]
+) -> dict[str, Any]:
     """Generate complete report."""
     # Find files
     files = find_data_files(directory)
@@ -354,9 +352,8 @@ def generate_report(
     if "files" in sections or "all" in sections:
         report["files"] = files
 
-    if "parameters" in sections or "all" in sections:
-        if sim_info.get("parameters"):
-            report["parameters"] = sim_info["parameters"]
+    if ("parameters" in sections or "all" in sections) and sim_info.get("parameters"):
+        report["parameters"] = sim_info["parameters"]
 
     return report
 
@@ -428,7 +425,7 @@ def main():
         sys.exit(1)
 
 
-def format_report_text(report: Dict[str, Any]) -> str:
+def format_report_text(report: dict[str, Any]) -> str:
     """Format report as human-readable text."""
     lines = []
     lines.append("=" * 60)

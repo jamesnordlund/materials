@@ -4,10 +4,9 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Tuple
 
 
-def get_free_disk_space_gb(path: str) -> Optional[float]:
+def get_free_disk_space_gb(path: str) -> float | None:
     """Get free disk space in GB. Cross-platform (Windows, Linux, macOS)."""
     try:
         if sys.platform == "win32":
@@ -30,17 +29,17 @@ def get_free_disk_space_gb(path: str) -> Optional[float]:
         return None
 
 
-def load_config(path: str) -> Dict[str, object]:
+def load_config(path: str) -> dict[str, object]:
     if not os.path.exists(path):
         raise ValueError(f"Config not found: {path}")
     if path.endswith(".json"):
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             return json.load(handle)
     # Minimal YAML-like fallback: key: value per line
-    config: Dict[str, object] = {}
-    # Regex for scientific notation: optional sign, digits, optional decimal, optional digits, e/E, optional sign, digits
+    config: dict[str, object] = {}
+    # Regex for scientific notation
     sci_notation_re = re.compile(r'^[+-]?\d+\.?\d*[eE][+-]?\d+$')
-    with open(path, "r", encoding="utf-8") as handle:
+    with open(path, encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -52,9 +51,7 @@ def load_config(path: str) -> Dict[str, object]:
             value = value.strip()
             try:
                 # Check for scientific notation first
-                if sci_notation_re.match(value):
-                    parsed = float(value)
-                elif "." in value:
+                if sci_notation_re.match(value) or "." in value:
                     parsed = float(value)
                 else:
                     parsed = int(value)
@@ -64,14 +61,14 @@ def load_config(path: str) -> Dict[str, object]:
     return config
 
 
-def parse_list(raw: Optional[str]) -> List[str]:
+def parse_list(raw: str | None) -> list[str]:
     if not raw:
         return []
     return [p.strip() for p in raw.split(",") if p.strip()]
 
 
-def parse_ranges(raw: Optional[str]) -> Dict[str, Tuple[float, float]]:
-    ranges: Dict[str, Tuple[float, float]] = {}
+def parse_ranges(raw: str | None) -> dict[str, tuple[float, float]]:
+    ranges: dict[str, tuple[float, float]] = {}
     if not raw:
         return ranges
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -83,7 +80,7 @@ def parse_ranges(raw: Optional[str]) -> Dict[str, Tuple[float, float]]:
     return ranges
 
 
-def check_mesh_quality(config: Dict[str, object]) -> List[str]:
+def check_mesh_quality(config: dict[str, object]) -> list[str]:
     """
     Check mesh quality metrics if available in config.
 
@@ -98,7 +95,7 @@ def check_mesh_quality(config: Dict[str, object]) -> List[str]:
     Returns:
         List of warning messages (empty if no issues or no mesh data)
     """
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     # Check for mesh metrics in config (nested under 'mesh' key or at top level)
     mesh = config.get("mesh", {})
@@ -152,14 +149,14 @@ def check_mesh_quality(config: Dict[str, object]) -> List[str]:
 
 
 def preflight_check(
-    config: Dict[str, object],
-    required: List[str],
-    ranges: Dict[str, Tuple[float, float]],
-    output_dir: Optional[str],
+    config: dict[str, object],
+    required: list[str],
+    ranges: dict[str, tuple[float, float]],
+    output_dir: str | None,
     min_free_gb: float,
-) -> Dict[str, object]:
-    blockers: List[str] = []
-    warnings: List[str] = []
+) -> dict[str, object]:
+    blockers: list[str] = []
+    warnings: list[str] = []
 
     params = config.get("parameters", {})
     if not isinstance(params, dict):

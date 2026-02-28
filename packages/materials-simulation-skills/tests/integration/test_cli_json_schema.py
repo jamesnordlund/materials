@@ -6,7 +6,6 @@ from pathlib import Path
 
 from tests.integration._schema import assert_schema
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "skills" / "core-numerical" / "numerical-stability" / "scripts"
 
@@ -779,7 +778,9 @@ class TestCliJsonSchema(unittest.TestCase):
     def test_result_validator_schema(self):
         metrics_path = ROOT / "tests" / "integration" / "metrics.json"
         metrics_path.write_text(
-            '{"mass_initial": 1.0, "mass_final": 1.0001, "energy_history": [1.0, 0.9], "field_min": 0.0, "field_max": 1.0}'
+            '{"mass_initial": 1.0, "mass_final": 1.0001,'
+            ' "energy_history": [1.0, 0.9],'
+            ' "field_min": 0.0, "field_max": 1.0}'
         )
         try:
             cmd = [

@@ -3,15 +3,14 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, List, Optional
 
 
-def load_metrics(path: str) -> Dict[str, object]:
-    with open(path, "r", encoding="utf-8") as handle:
+def load_metrics(path: str) -> dict[str, object]:
+    with open(path, encoding="utf-8") as handle:
         return json.load(handle)
 
 
-def check_energy_monotonic(energies: List[float]) -> bool:
+def check_energy_monotonic(energies: list[float]) -> bool:
     """Check that energy decreases (or stays constant) at every step.
 
     Appropriate for dissipative / gradient-flow systems such as
@@ -24,7 +23,7 @@ def check_energy_monotonic(energies: List[float]) -> bool:
     )
 
 
-def check_energy_overall(energies: List[float]) -> bool:
+def check_energy_overall(energies: list[float]) -> bool:
     """Check that the final energy is less than or equal to the initial energy.
 
     Appropriate for general simulations where local energy fluctuations
@@ -40,13 +39,13 @@ _ENERGY_MODES = ("monotonic", "overall", "bounded")
 
 
 def validate_metrics(
-    metrics: Dict[str, object],
-    bound_min: Optional[float],
-    bound_max: Optional[float],
+    metrics: dict[str, object],
+    bound_min: float | None,
+    bound_max: float | None,
     mass_tol: float,
     check_energy_dissipation: bool = True,
-    energy_mode: Optional[str] = None,
-) -> Dict[str, object]:
+    energy_mode: str | None = None,
+) -> dict[str, object]:
     """Validate simulation result metrics.
 
     Parameters
@@ -86,14 +85,17 @@ def validate_metrics(
             f"energy_mode must be one of {_ENERGY_MODES!r}, got {energy_mode!r}"
         )
 
-    checks: Dict[str, bool] = {}
-    failed: List[str] = []
+    checks: dict[str, bool] = {}
+    failed: list[str] = []
 
     mass_initial = metrics.get("mass_initial")
     mass_final = metrics.get("mass_final")
     if mass_initial is not None and mass_final is not None:
         try:
-            drift = abs(float(mass_final) - float(mass_initial)) / max(abs(float(mass_initial)), 1e-12)
+            drift = (
+                abs(float(mass_final) - float(mass_initial))
+                / max(abs(float(mass_initial)), 1e-12)
+            )
             checks["mass_conserved"] = drift <= mass_tol
             if not checks["mass_conserved"]:
                 failed.append("mass_conserved")
@@ -126,7 +128,11 @@ def validate_metrics(
                 if not checks["energy_bounded"]:
                     failed.append("energy_bounded")
         except (TypeError, ValueError):
-            key = "energy_decreases" if energy_mode in ("monotonic", "overall") else "energy_bounded"
+            key = (
+                "energy_decreases"
+                if energy_mode in ("monotonic", "overall")
+                else "energy_bounded"
+            )
             checks[key] = False
             failed.append(key)
 

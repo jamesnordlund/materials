@@ -2,17 +2,16 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
-def parse_list(raw: str) -> List[float]:
+def parse_list(raw: str) -> list[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("scores must be a comma-separated list")
     return [float(p) for p in parts]
 
 
-def parse_names(raw: str, count: int) -> List[str]:
+def parse_names(raw: str, count: int) -> list[str]:
     if not raw:
         return [f"p{i+1}" for i in range(count)]
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -21,8 +20,10 @@ def parse_names(raw: str, count: int) -> List[str]:
     return parts
 
 
-def summarize(scores: List[float], names: List[str]) -> Dict[str, object]:
-    ranking = sorted(zip(names, scores), key=lambda x: x[1], reverse=True)
+def summarize(scores: list[float], names: list[str]) -> dict[str, object]:
+    ranking = sorted(
+        zip(names, scores, strict=True), key=lambda x: x[1], reverse=True
+    )
     notes = []
     if ranking and ranking[0][1] < 0.1:
         notes.append("All sensitivities are low; consider alternative outputs.")

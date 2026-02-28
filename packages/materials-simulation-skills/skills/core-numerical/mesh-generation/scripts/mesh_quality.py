@@ -2,10 +2,9 @@
 import argparse
 import json
 import sys
-from typing import Dict
 
 
-def compute_quality(dx: float, dy: float, dz: float) -> Dict[str, object]:
+def compute_quality(dx: float, dy: float, dz: float) -> dict[str, object]:
     """Compute mesh quality metrics for a hexahedral cell.
 
     Computes aspect ratio, mean-deviation skewness, and anisotropy index for

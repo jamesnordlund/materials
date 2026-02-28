@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import scipy.io
@@ -17,10 +17,10 @@ from _shared._matrix_io import load_matrix  # noqa: E402
 
 
 def diagnose_jacobian(
-    matrix: Union[np.ndarray, scipy.sparse.spmatrix],
-    finite_diff_matrix: Optional[Union[np.ndarray, scipy.sparse.spmatrix]] = None,
+    matrix: np.ndarray | scipy.sparse.spmatrix,
+    finite_diff_matrix: np.ndarray | scipy.sparse.spmatrix | None = None,
     tolerance: float = 1e-6,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze Jacobian matrix quality.
 
     Supports both dense numpy arrays and sparse scipy matrices.
@@ -46,10 +46,13 @@ def diagnose_jacobian(
         raise ValueError("tolerance must be positive")
 
     m, n = matrix.shape
-    notes: List[str] = []
+    notes: list[str] = []
 
     if is_sparse:
-        notes.append(f"Sparse Jacobian detected (nnz={matrix.nnz}, density={matrix.nnz/(m*n):.4g}).")
+        density = matrix.nnz / (m * n)
+        notes.append(
+            f"Sparse Jacobian detected (nnz={matrix.nnz}, density={density:.4g})."
+        )
 
     # Compute SVD for condition number and rank analysis
     try:
@@ -61,14 +64,22 @@ def diagnose_jacobian(
                 singular_values = np.linalg.svd(matrix.toarray(), compute_uv=False)
             else:
                 # Compute largest and smallest singular values
-                s_max = scipy.sparse.linalg.svds(matrix, k=k, which='LM', return_singular_vectors=False)
-                s_min = scipy.sparse.linalg.svds(matrix, k=k, which='SM', return_singular_vectors=False)
+                s_max = scipy.sparse.linalg.svds(
+                    matrix, k=k, which='LM', return_singular_vectors=False
+                )
+                s_min = scipy.sparse.linalg.svds(
+                    matrix, k=k, which='SM', return_singular_vectors=False
+                )
                 # Combine and sort
                 singular_values = np.sort(np.concatenate([s_max, s_min]))[::-1]
         else:
             # Dense case (original behavior)
             singular_values = np.linalg.svd(matrix, compute_uv=False)
-    except (np.linalg.LinAlgError, scipy.sparse.linalg.ArpackNoConvergence, scipy.sparse.linalg.ArpackError):
+    except (
+        np.linalg.LinAlgError,
+        scipy.sparse.linalg.ArpackNoConvergence,
+        scipy.sparse.linalg.ArpackError,
+    ):
         return {
             "shape": [m, n],
             "condition_number": float("inf"),
@@ -86,10 +97,7 @@ def diagnose_jacobian(
     sv_min = float(singular_values[-1])
 
     # Condition number
-    if sv_min > 1e-30:
-        condition_number = sv_max / sv_min
-    else:
-        condition_number = float("inf")
+    condition_number = sv_max / sv_min if sv_min > 1e-30 else float("inf")
 
     # Estimate numerical rank
     rank_tol = max(m, n) * sv_max * np.finfo(float).eps
@@ -144,7 +152,10 @@ def diagnose_jacobian(
             finite_diff_error = float(relative_error)
 
             if relative_error > 0.1:
-                notes.append(f"Large discrepancy with finite-diff ({relative_error:.2e}); check analytic Jacobian.")
+                notes.append(
+                    f"Large discrepancy with finite-diff ({relative_error:.2e});"
+                    " check analytic Jacobian."
+                )
             elif relative_error > 0.01:
                 notes.append(f"Moderate discrepancy with finite-diff ({relative_error:.2e}).")
             else:
@@ -223,7 +234,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "matrix": args.matrix,
             "finite_diff_matrix": args.finite_diff_matrix,

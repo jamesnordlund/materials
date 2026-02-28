@@ -3,7 +3,6 @@ import sys
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "skills" / "core-numerical" / "numerical-stability" / "scripts"
 

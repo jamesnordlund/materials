@@ -3,7 +3,6 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict
 
 
 def estimate_error(
@@ -11,7 +10,7 @@ def estimate_error(
     scheme: str,
     commutator_norm: float,
     target_error: float,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     if dt <= 0:
         raise ValueError("dt must be positive")
     if commutator_norm < 0:

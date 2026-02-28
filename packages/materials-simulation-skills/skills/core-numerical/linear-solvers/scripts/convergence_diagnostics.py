@@ -3,17 +3,16 @@ import argparse
 import json
 import math
 import sys
-from typing import List, Tuple
 
 
-def parse_list(raw: str) -> List[float]:
+def parse_list(raw: str) -> list[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("residual list must be a comma-separated list")
     return [float(p) for p in parts]
 
 
-def compute_diagnostics(residuals: List[float]) -> Tuple[float, bool, str]:
+def compute_diagnostics(residuals: list[float]) -> tuple[float, bool, str]:
     if len(residuals) < 2:
         raise ValueError("residual list must have at least 2 entries")
     if any(r <= 0 or not math.isfinite(r) for r in residuals):

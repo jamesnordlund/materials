@@ -6,8 +6,10 @@ Computes error metrics between simulation output and reference/experimental data
 Supports various error norms (L1, L2, Linf, RMSE, MAE) and handles interpolation.
 
 Usage:
-    python comparison_tool.py --simulation result.json --reference expected.json --metric l2_error --json
-    python comparison_tool.py --simulation result.json --reference experiment.csv --metric rmse --json
+    python comparison_tool.py --simulation result.json --reference expected.json \
+        --metric l2_error --json
+    python comparison_tool.py --simulation result.json --reference experiment.csv \
+        --metric rmse --json
 """
 
 import argparse
@@ -15,15 +17,16 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, load_csv_file, flatten_field
+    from ._utils import flatten_field, load_csv_file, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
@@ -31,7 +34,7 @@ except ImportError:
     flatten_field = _utils.flatten_field
 
 
-def load_data(filepath: str) -> Dict[str, Any]:
+def load_data(filepath: str) -> dict[str, Any]:
     """Load data based on file extension."""
     if filepath.endswith(".json"):
         return load_json_file(filepath)
@@ -42,9 +45,9 @@ def load_data(filepath: str) -> Dict[str, Any]:
 
 
 def extract_values(
-    data: Dict[str, Any],
-    field: Optional[str] = None
-) -> Tuple[List[float], Optional[List[float]]]:
+    data: dict[str, Any],
+    field: str | None = None
+) -> tuple[list[float], list[float] | None]:
     """Extract values and optional coordinates from data."""
     values = None
     coords = None
@@ -84,10 +87,10 @@ flatten_list = flatten_field
 
 
 def interpolate_1d(
-    x_new: List[float],
-    x_old: List[float],
-    y_old: List[float]
-) -> List[float]:
+    x_new: list[float],
+    x_old: list[float],
+    y_old: list[float]
+) -> list[float]:
     """Linear interpolation from (x_old, y_old) to x_new."""
     if not x_old or not y_old:
         return []
@@ -116,12 +119,12 @@ def interpolate_1d(
     return y_new
 
 
-def compute_l1_error(sim: List[float], ref: List[float]) -> float:
+def compute_l1_error(sim: list[float], ref: list[float]) -> float:
     """Compute L1 error (mean absolute error normalized by reference norm)."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
-    l1_diff = sum(abs(s - r) for s, r in zip(sim, ref))
+    l1_diff = sum(abs(s - r) for s, r in zip(sim, ref, strict=True))
     l1_ref = sum(abs(r) for r in ref)
 
     if l1_ref > 0:
@@ -129,12 +132,12 @@ def compute_l1_error(sim: List[float], ref: List[float]) -> float:
     return l1_diff
 
 
-def compute_l2_error(sim: List[float], ref: List[float]) -> float:
+def compute_l2_error(sim: list[float], ref: list[float]) -> float:
     """Compute L2 error (relative RMS error)."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
-    l2_diff_sq = sum((s - r) ** 2 for s, r in zip(sim, ref))
+    l2_diff_sq = sum((s - r) ** 2 for s, r in zip(sim, ref, strict=True))
     l2_ref_sq = sum(r ** 2 for r in ref)
 
     if l2_ref_sq > 0:
@@ -142,12 +145,12 @@ def compute_l2_error(sim: List[float], ref: List[float]) -> float:
     return math.sqrt(l2_diff_sq)
 
 
-def compute_linf_error(sim: List[float], ref: List[float]) -> float:
+def compute_linf_error(sim: list[float], ref: list[float]) -> float:
     """Compute L-infinity error (max absolute error normalized)."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
-    max_diff = max(abs(s - r) for s, r in zip(sim, ref))
+    max_diff = max(abs(s - r) for s, r in zip(sim, ref, strict=True))
     max_ref = max(abs(r) for r in ref)
 
     if max_ref > 0:
@@ -155,34 +158,34 @@ def compute_linf_error(sim: List[float], ref: List[float]) -> float:
     return max_diff
 
 
-def compute_rmse(sim: List[float], ref: List[float]) -> float:
+def compute_rmse(sim: list[float], ref: list[float]) -> float:
     """Compute Root Mean Square Error (absolute)."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
     n = len(sim)
-    mse = sum((s - r) ** 2 for s, r in zip(sim, ref)) / n
+    mse = sum((s - r) ** 2 for s, r in zip(sim, ref, strict=True)) / n
     return math.sqrt(mse)
 
 
-def compute_mae(sim: List[float], ref: List[float]) -> float:
+def compute_mae(sim: list[float], ref: list[float]) -> float:
     """Compute Mean Absolute Error."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
     n = len(sim)
-    return sum(abs(s - r) for s, r in zip(sim, ref)) / n
+    return sum(abs(s - r) for s, r in zip(sim, ref, strict=True)) / n
 
 
-def compute_max_difference(sim: List[float], ref: List[float]) -> float:
+def compute_max_difference(sim: list[float], ref: list[float]) -> float:
     """Compute maximum absolute difference."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
-    return max(abs(s - r) for s, r in zip(sim, ref))
+    return max(abs(s - r) for s, r in zip(sim, ref, strict=True))
 
 
-def compute_correlation(sim: List[float], ref: List[float]) -> float:
+def compute_correlation(sim: list[float], ref: list[float]) -> float:
     """Compute Pearson correlation coefficient."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
@@ -191,7 +194,10 @@ def compute_correlation(sim: List[float], ref: List[float]) -> float:
     mean_sim = sum(sim) / n
     mean_ref = sum(ref) / n
 
-    cov = sum((s - mean_sim) * (r - mean_ref) for s, r in zip(sim, ref))
+    cov = sum(
+        (s - mean_sim) * (r - mean_ref)
+        for s, r in zip(sim, ref, strict=True)
+    )
     std_sim = math.sqrt(sum((s - mean_sim) ** 2 for s in sim))
     std_ref = math.sqrt(sum((r - mean_ref) ** 2 for r in ref))
 
@@ -200,14 +206,14 @@ def compute_correlation(sim: List[float], ref: List[float]) -> float:
     return 0.0
 
 
-def compute_r_squared(sim: List[float], ref: List[float]) -> float:
+def compute_r_squared(sim: list[float], ref: list[float]) -> float:
     """Compute coefficient of determination (R^2)."""
     if len(sim) != len(ref):
         raise ValueError(f"Length mismatch: {len(sim)} vs {len(ref)}")
 
     mean_ref = sum(ref) / len(ref)
 
-    ss_res = sum((r - s) ** 2 for s, r in zip(sim, ref))
+    ss_res = sum((r - s) ** 2 for s, r in zip(sim, ref, strict=True))
     ss_tot = sum((r - mean_ref) ** 2 for r in ref)
 
     if ss_tot > 0:
@@ -253,10 +259,10 @@ def interpret_error(metric: str, value: float) -> str:
 
 
 def compare_data(
-    sim_values: List[float],
-    ref_values: List[float],
-    metrics: List[str]
-) -> Dict[str, Any]:
+    sim_values: list[float],
+    ref_values: list[float],
+    metrics: list[str]
+) -> dict[str, Any]:
     """Compare simulation and reference values using specified metrics."""
     results = {}
 
@@ -349,15 +355,14 @@ def main():
             ref_values = interpolate_1d(sim_coords, ref_coords, ref_values)
 
         # Check lengths match
-        if len(sim_values) != len(ref_values):
-            if not args.interpolate:
-                print(f"Warning: Length mismatch ({len(sim_values)} vs {len(ref_values)}). "
-                      "Consider using --interpolate", file=sys.stderr)
+        if len(sim_values) != len(ref_values) and not args.interpolate:
+            print(f"Warning: Length mismatch ({len(sim_values)} vs {len(ref_values)}). "
+                  "Consider using --interpolate", file=sys.stderr)
 
-                # Truncate to shorter length
-                min_len = min(len(sim_values), len(ref_values))
-                sim_values = sim_values[:min_len]
-                ref_values = ref_values[:min_len]
+            # Truncate to shorter length
+            min_len = min(len(sim_values), len(ref_values))
+            sim_values = sim_values[:min_len]
+            ref_values = ref_values[:min_len]
 
         # Determine metrics to compute
         if args.all_metrics:

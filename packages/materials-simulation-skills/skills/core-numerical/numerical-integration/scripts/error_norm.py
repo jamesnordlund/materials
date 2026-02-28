@@ -3,10 +3,9 @@ import argparse
 import json
 import math
 import sys
-from typing import List, Optional, Tuple
 
 
-def parse_list(raw: str) -> List[float]:
+def parse_list(raw: str) -> list[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("value list must be a comma-separated list")
@@ -14,14 +13,14 @@ def parse_list(raw: str) -> List[float]:
 
 
 def compute_error_norm(
-    error: List[float],
-    solution: Optional[List[float]],
-    scale: Optional[List[float]],
+    error: list[float],
+    solution: list[float] | None,
+    scale: list[float] | None,
     rtol: float,
     atol: float,
     norm: str,
     min_scale: float,
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     if not error:
         raise ValueError("error list must be non-empty")
     if rtol < 0 or atol < 0:
@@ -43,7 +42,7 @@ def compute_error_norm(
         if any(s <= 0 for s in scale):
             raise ValueError("scale values must be positive")
 
-    scaled = [e / s for e, s in zip(error, scale)]
+    scaled = [e / s for e, s in zip(error, scale, strict=True)]
     abs_scaled = [abs(v) for v in scaled]
     if norm == "inf":
         error_norm = max(abs_scaled)

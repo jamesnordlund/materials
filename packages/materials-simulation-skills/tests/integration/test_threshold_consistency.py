@@ -90,7 +90,8 @@ class TestThresholdConsistency(unittest.TestCase):
                 context = lines[line_num - 1] if line_num > 0 else ""
 
                 # Allow if it mentions "updated from" or "was" or "previously"
-                if not any(word in context.lower() for word in ['updated', 'was', 'previously', 'old', 'prior']):
+                hist_words = ['updated', 'was', 'previously', 'old', 'prior']
+                if not any(word in context.lower() for word in hist_words):
                     wrong_values.append((file_path, line_num, value, context))
 
         if wrong_values:
@@ -106,9 +107,13 @@ class TestThresholdConsistency(unittest.TestCase):
 
         # Pattern to find BO dimension threshold mentions
         # Look for "5" or "10" in context of BO/Bayesian optimization and dimensions
-        pattern = r'(?:BO|Bayesian.*optimization).*(?:dimension|dim).*(?:threshold|limit|practical).*\d+|dimension.*threshold.*\d+.*BO'
+        pattern = (
+            r'(?:BO|Bayesian.*optimization).*(?:dimension|dim)'
+            r'.*(?:threshold|limit|practical).*\d+'
+            r'|dimension.*threshold.*\d+.*BO'
+        )
 
-        matches = self._search_skill_files(skill_path, pattern)
+        self._search_skill_files(skill_path, pattern)
 
         # Also search for numeric thresholds with BO context
         all_files = list(skill_path.rglob("*.py")) + list(skill_path.rglob("*.md"))
@@ -121,8 +126,14 @@ class TestThresholdConsistency(unittest.TestCase):
 
                 for line_num, line in enumerate(lines, start=1):
                     # Check for dimension threshold context
-                    if any(keyword in line.lower() for keyword in ['dimension', 'dim']) and \
-                       any(keyword in line.lower() for keyword in ['threshold', 'limit', 'practical']):
+                    dim_match = any(
+                        kw in line.lower() for kw in ['dimension', 'dim']
+                    )
+                    thresh_match = any(
+                        kw in line.lower()
+                        for kw in ['threshold', 'limit', 'practical']
+                    )
+                    if dim_match and thresh_match:
                         # Look for numbers 5 or 10 in this line or nearby lines
                         context_start = max(0, line_num - 2)
                         context_end = min(len(lines), line_num + 2)
@@ -141,15 +152,23 @@ class TestThresholdConsistency(unittest.TestCase):
             for file_path, line_num, value, context in threshold_values:
                 if value == 5:
                     # Check if it's a historical note or error
-                    if 'was' not in context.lower() and 'previously' not in context.lower():
-                        # Be lenient - only fail if it's clearly setting a threshold to 5
-                        if 'threshold' in context.lower() or '=' in context:
+                    ctx_low = context.lower()
+                    is_historical = (
+                        'was' in ctx_low or 'previously' in ctx_low
+                    )
+                    if not is_historical and (
+                        'threshold' in ctx_low or '=' in context
+                    ):
                             wrong_values.append((file_path, line_num, value, context))
 
             if wrong_values:
-                msg = "Found incorrect BO dimension threshold values (should be 10 per Frazier 2018):\n"
+                msg = (
+                    "Found incorrect BO dimension threshold"
+                    " values (should be 10 per Frazier 2018):\n"
+                )
                 for file_path, line_num, value, context in wrong_values:
-                    msg += f"  {file_path.relative_to(REPO_ROOT)}:{line_num}: threshold={value}\n"
+                    rel = file_path.relative_to(REPO_ROOT)
+                    msg += f"  {rel}:{line_num}: threshold={value}\n"
                     msg += f"    Context: {context[:80]}\n"
                 self.fail(msg)
 
@@ -158,9 +177,12 @@ class TestThresholdConsistency(unittest.TestCase):
         skill_path = SKILLS_DIR / "core-numerical" / "linear-solvers"
 
         # Pattern to find condition number thresholds (common values: 1e12, 1e14, 1e16)
-        pattern = r'condition.*(?:threshold|limit|warning).*1e\d+|1e\d+.*condition.*(?:threshold|ill)'
+        pattern = (
+            r'condition.*(?:threshold|limit|warning).*1e\d+'
+            r'|1e\d+.*condition.*(?:threshold|ill)'
+        )
 
-        matches = self._search_skill_files(skill_path, pattern)
+        self._search_skill_files(skill_path, pattern)
 
         # Extract all condition number thresholds
         cond_thresholds = []
@@ -222,7 +244,7 @@ class TestThresholdConsistency(unittest.TestCase):
                     pass
 
         # Check for contradictory values for the same method
-        rk4_values = [k[1] for k in cfl_values.keys() if k[0] == 'RK4']
+        rk4_values = [k[1] for k in cfl_values if k[0] == 'RK4']
         unique_rk4 = set(rk4_values)
 
         if len(unique_rk4) > 1:
@@ -236,7 +258,7 @@ class TestThresholdConsistency(unittest.TestCase):
                 for (method, value), occurrences in cfl_values.items():
                     if method == 'RK4':
                         msg += f"\n  CFL = {value}:\n"
-                        for file_path, line_num, line in occurrences[:3]:  # Show first 3
+                        for file_path, line_num, _line in occurrences[:3]:  # Show first 3
                             msg += f"    {file_path.relative_to(REPO_ROOT)}:{line_num}\n"
                 self.fail(msg)
 
@@ -245,7 +267,6 @@ class TestThresholdConsistency(unittest.TestCase):
         skill_path = SKILLS_DIR / "core-numerical" / "mesh-generation"
 
         # Pattern for skewness thresholds (common: 0.9, 0.95)
-        pattern = r'skewness.*(?:threshold|limit|warning).*0\.\d+|0\.\d+.*skewness.*(?:threshold|warning)'
 
         skewness_thresholds = []
         all_files = list(skill_path.rglob("*.py")) + list(skill_path.rglob("*.md"))
@@ -254,7 +275,10 @@ class TestThresholdConsistency(unittest.TestCase):
             try:
                 content = file_path.read_text(encoding='utf-8')
                 for line_num, line in enumerate(content.splitlines(), start=1):
-                    if 'skewness' in line.lower() and any(word in line.lower() for word in ['threshold', 'warning', 'limit', 'max']):
+                    skew_words = ['threshold', 'warning', 'limit', 'max']
+                    if 'skewness' in line.lower() and any(
+                        w in line.lower() for w in skew_words
+                    ):
                         # Extract decimal values between 0.5 and 1.0
                         for match in re.finditer(r'0\.\d+', line):
                             value = float(match.group(0))
@@ -267,9 +291,15 @@ class TestThresholdConsistency(unittest.TestCase):
         if len(skewness_thresholds) > 1:
             unique_values = set(v for _, _, v, _ in skewness_thresholds)
             if len(unique_values) > 1:
-                msg = "Found inconsistent skewness thresholds in mesh-generation:\n"
+                msg = (
+                    "Found inconsistent skewness thresholds"
+                    " in mesh-generation:\n"
+                )
                 for value in sorted(unique_values):
-                    occurrences = [(f, ln, ctx) for f, ln, v, ctx in skewness_thresholds if v == value]
+                    occurrences = [
+                        (f, ln, ctx) for f, ln, v, ctx
+                        in skewness_thresholds if v == value
+                    ]
                     msg += f"  {value}: {len(occurrences)} occurrence(s)\n"
                     for f, ln, ctx in occurrences:
                         msg += f"    {f.relative_to(REPO_ROOT)}:{ln}: {ctx[:80]}\n"
@@ -288,7 +318,8 @@ class TestThresholdConsistency(unittest.TestCase):
             try:
                 content = file_path.read_text(encoding='utf-8')
                 for line_num, line in enumerate(content.splitlines(), start=1):
-                    if any(keyword in line.lower() for keyword in ['quadratic', 'superlinear', 'convergence rate']):
+                    conv_kws = ['quadratic', 'superlinear', 'convergence rate']
+                    if any(kw in line.lower() for kw in conv_kws):
                         # Look for threshold values near 2.0 (quadratic), 1.5 (superlinear)
                         for match in re.finditer(r'\b[12]\.\d+\b', line):
                             value = float(match.group(0))
@@ -318,7 +349,10 @@ class TestThresholdConsistency(unittest.TestCase):
         if len(superlinear) > 1:
             super_values = set(v for _, _, v, _ in superlinear)
             if len(super_values) > 1:
-                msg = "Found inconsistent superlinear convergence thresholds in nonlinear-solvers:\n"
+                msg = (
+                    "Found inconsistent superlinear convergence"
+                    " thresholds in nonlinear-solvers:\n"
+                )
                 for value in sorted(super_values):
                     occurrences = [(f, ln, ctx) for f, ln, v, ctx in superlinear if v == value]
                     msg += f"  {value}: {len(occurrences)} occurrence(s)\n"

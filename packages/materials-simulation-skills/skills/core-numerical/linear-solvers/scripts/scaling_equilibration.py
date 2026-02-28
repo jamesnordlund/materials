@@ -3,11 +3,9 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, List, Optional, Union
 
 import numpy as np
 import scipy.sparse
-
 
 # Enable import of shared utilities from skills/_shared/
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -15,10 +13,10 @@ from _shared._matrix_io import load_matrix  # noqa: E402
 
 
 def compute_scaling(
-    matrix: Union[np.ndarray, scipy.sparse.spmatrix],
+    matrix: np.ndarray | scipy.sparse.spmatrix,
     symmetry_tol: float,
     symmetric: bool,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """Compute row/column scaling factors for matrix equilibration.
 
     Supports both dense numpy arrays and sparse scipy matrices.
@@ -86,7 +84,7 @@ def compute_scaling(
     if symmetric:
         symmetric_scale = [1.0 / np.sqrt(v) if v > 0 else 1.0 for v in row_max]
 
-    notes: List[str] = []
+    notes: list[str] = []
     if is_sparse:
         notes.append(f"Sparse matrix detected (nnz={matrix.nnz}, density={matrix.nnz/(m*n):.4g}).")
     if zero_rows:

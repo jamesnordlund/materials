@@ -2,10 +2,9 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
-def select_optimizer(dim: int, budget: int, noise: str, constraints: bool) -> Dict[str, object]:
+def select_optimizer(dim: int, budget: int, noise: str, constraints: bool) -> dict[str, object]:
     if dim <= 0:
         raise ValueError("dim must be positive")
     if budget <= 0:
@@ -13,8 +12,8 @@ def select_optimizer(dim: int, budget: int, noise: str, constraints: bool) -> Di
     if noise not in {"low", "medium", "high"}:
         raise ValueError("noise must be low, medium, or high")
 
-    recommended: List[str] = []
-    notes: List[str] = []
+    recommended: list[str] = []
+    notes: list[str] = []
     # BO dimension threshold: 10 dimensions is practical limit for GP-based BO
     # Reference: Frazier, P. I. (2018). "A Tutorial on Bayesian Optimization."
     # arXiv:1807.02811. Section 6.2 discusses scalability limits.
@@ -45,7 +44,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dim", type=int, required=True, help="Parameter dimension")
     parser.add_argument("--budget", type=int, required=True, help="Evaluation budget")
-    parser.add_argument("--noise", choices=["low", "medium", "high"], default="low", help="Noise level")
+    parser.add_argument(
+        "--noise", choices=["low", "medium", "high"], default="low",
+        help="Noise level",
+    )
     parser.add_argument("--constraints", action="store_true", help="Constraints present")
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     return parser.parse_args()

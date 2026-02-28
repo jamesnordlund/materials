@@ -45,7 +45,9 @@ class TestMeshGenerationErrors(unittest.TestCase):
     def test_grid_sizing_negative_length(self):
         """Error: 'length must be positive'"""
         script = SKILLS / "core-numerical/mesh-generation/scripts/grid_sizing.py"
-        result = run_script_expect_error(script, ["--length", "-1.0", "--resolution", "200", "--json"])
+        result = run_script_expect_error(
+            script, ["--length", "-1.0", "--resolution", "200", "--json"]
+        )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         # Check error message in stderr or stdout
         output = result.stderr + result.stdout
@@ -54,7 +56,9 @@ class TestMeshGenerationErrors(unittest.TestCase):
     def test_grid_sizing_negative_resolution(self):
         """Error: 'resolution must be positive'"""
         script = SKILLS / "core-numerical/mesh-generation/scripts/grid_sizing.py"
-        result = run_script_expect_error(script, ["--length", "1.0", "--resolution", "-100", "--json"])
+        result = run_script_expect_error(
+            script, ["--length", "1.0", "--resolution", "-100", "--json"]
+        )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         self.assertIn("resolution must be positive", output.lower())
@@ -62,7 +66,9 @@ class TestMeshGenerationErrors(unittest.TestCase):
     def test_mesh_quality_negative_spacing(self):
         """Error: 'dx, dy, dz must be positive'"""
         script = SKILLS / "core-numerical/mesh-generation/scripts/mesh_quality.py"
-        result = run_script_expect_error(script, ["--dx", "-1.0", "--dy", "0.5", "--dz", "0.5", "--json"])
+        result = run_script_expect_error(
+            script, ["--dx", "-1.0", "--dy", "0.5", "--dz", "0.5", "--json"]
+        )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         self.assertTrue(
@@ -93,19 +99,26 @@ class TestTimeSteppingErrors(unittest.TestCase):
         script = SKILLS / "core-numerical/time-stepping/scripts/timestep_planner.py"
         result = run_script_expect_error(
             script,
-            ["--dt-target", "1e-4", "--dt-limit", "2e-4", "--safety", "1.5", "--json"]
+            [
+                "--dt-target", "1e-4", "--dt-limit", "2e-4",
+                "--safety", "1.5", "--json",
+            ]
         )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         self.assertTrue(
-            "safety factor" in output.lower() and ("unstable" in output.lower() or "> 1" in output.lower()),
+            "safety factor" in output.lower()
+            and ("unstable" in output.lower() or "> 1" in output.lower()),
             "Expected safety factor > 1.0 error"
         )
 
     def test_output_schedule_invalid_time_range(self):
         """Error: 't-end must be > t-start'"""
         script = SKILLS / "core-numerical/time-stepping/scripts/output_schedule.py"
-        result = run_script_expect_error(script, ["--t-start", "10", "--t-end", "5", "--interval", "1", "--json"])
+        result = run_script_expect_error(
+            script,
+            ["--t-start", "10", "--t-end", "5", "--interval", "1", "--json"],
+        )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         # Script outputs: "t_end must be greater than t_start"
@@ -121,7 +134,10 @@ class TestTimeSteppingErrors(unittest.TestCase):
         script = SKILLS / "core-numerical/time-stepping/scripts/checkpoint_planner.py"
         result = run_script_expect_error(
             script,
-            ["--run-time", "1000", "--checkpoint-cost", "-10", "--max-lost-time", "100", "--json"]
+            [
+                "--run-time", "1000", "--checkpoint-cost", "-10",
+                "--max-lost-time", "100", "--json",
+            ]
         )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
@@ -136,12 +152,16 @@ class TestLinearSolversErrors(unittest.TestCase):
         script = SKILLS / "core-numerical/linear-solvers/scripts/solver_selector.py"
         result = run_script_expect_error(
             script,
-            ["--matrix-type", "invalid_type", "--size", "1000", "--json"]
+            [
+                "--matrix-type", "invalid_type",
+                "--size", "1000", "--json",
+            ]
         )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         self.assertTrue(
-            "matrix" in output.lower() and ("type" in output.lower() or "invalid" in output.lower()),
+            "matrix" in output.lower()
+            and ("type" in output.lower() or "invalid" in output.lower()),
             "Expected invalid matrix type error"
         )
 
@@ -153,12 +173,15 @@ class TestNonlinearSolversErrors(unittest.TestCase):
         """Error: insufficient data for convergence analysis"""
         script = SKILLS / "core-numerical/nonlinear-solvers/scripts/convergence_analyzer.py"
         # Test with empty string residuals instead of file
-        result = run_script_expect_error(script, ["--residuals", "", "--json"])
+        result = run_script_expect_error(
+            script, ["--residuals", "", "--json"]
+        )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         # Script outputs: "residuals must be comma-separated numbers"
         self.assertTrue(
-            "residuals" in output.lower() and ("comma" in output.lower() or "numbers" in output.lower()),
+            "residuals" in output.lower()
+            and ("comma" in output.lower() or "numbers" in output.lower()),
             "Expected residuals format error"
         )
 
@@ -178,7 +201,8 @@ class TestNumericalIntegrationErrors(unittest.TestCase):
         output = result.stderr + result.stdout
         # Argparse error for invalid choice
         self.assertTrue(
-            "accuracy" in output.lower() and ("invalid" in output.lower() or "choice" in output.lower()),
+            "accuracy" in output.lower()
+            and ("invalid" in output.lower() or "choice" in output.lower()),
             "Expected invalid accuracy error"
         )
 
@@ -205,12 +229,16 @@ class TestParameterOptimizationErrors(unittest.TestCase):
         script = SKILLS / "simulation-workflow/parameter-optimization/scripts/doe_generator.py"
         result = run_script_expect_error(
             script,
-            ["--method", "invalid_method", "--dim", "2", "--budget", "10", "--json"]
+            [
+                "--method", "invalid_method",
+                "--dim", "2", "--budget", "10", "--json",
+            ]
         )
         self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
         output = result.stderr + result.stdout
         self.assertTrue(
-            "method" in output.lower() and ("unknown" in output.lower() or "invalid" in output.lower()),
+            "method" in output.lower()
+            and ("unknown" in output.lower() or "invalid" in output.lower()),
             "Expected unknown method error"
         )
 
@@ -273,12 +301,16 @@ class TestPostProcessingErrors(unittest.TestCase):
         try:
             result = run_script_expect_error(
                 script,
-                ["--input", str(data_file), "--field", "nonexistent_field", "--json"]
+                [
+                    "--input", str(data_file),
+                    "--field", "nonexistent_field", "--json",
+                ]
             )
             self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
             output = result.stderr + result.stdout
             self.assertTrue(
-                "field" in output.lower() and ("not found" in output.lower() or "does not exist" in output.lower()),
+                "field" in output.lower()
+                and ("not found" in output.lower() or "does not exist" in output.lower()),
                 "Expected field not found error"
             )
         finally:
@@ -290,7 +322,10 @@ class TestPostProcessingErrors(unittest.TestCase):
         data_file = create_test_file(json.dumps({"time": [0, 1, 2], "values": [1, 2]}))
         try:
             # Script requires --quantity argument
-            result = run_script_expect_error(script, ["--input", str(data_file), "--quantity", "values", "--json"])
+            result = run_script_expect_error(
+                script,
+                ["--input", str(data_file), "--quantity", "values", "--json"],
+            )
             # May succeed or fail depending on internal validation
             # If it fails, check for relevant error
             if result.returncode != 0:
@@ -362,14 +397,21 @@ class TestSimulationValidatorErrors(unittest.TestCase):
         """Error: invalid configuration structure"""
         script = SKILLS / "simulation-workflow/simulation-validator/scripts/preflight_checker.py"
         # Use malformed JSON that will fail to parse (not just plain text which YAML accepts)
-        invalid_config = create_test_file('{"key": invalid}', suffix=".json")
+        invalid_config = create_test_file(
+            '{"key": invalid}', suffix=".json"
+        )
         try:
-            result = run_script_expect_error(script, ["--config", str(invalid_config), "--json"])
+            result = run_script_expect_error(
+                script, ["--config", str(invalid_config), "--json"]
+            )
             self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
             output = result.stderr + result.stdout
             # Script will fail to parse malformed JSON with "Expecting value" error
             self.assertTrue(
-                "expecting" in output.lower() or "value" in output.lower() or "json" in output.lower() or len(output) > 0,
+                "expecting" in output.lower()
+                or "value" in output.lower()
+                or "json" in output.lower()
+                or len(output) > 0,
                 f"Expected JSON parse error, got: {output}"
             )
         finally:
@@ -377,11 +419,19 @@ class TestSimulationValidatorErrors(unittest.TestCase):
 
     def test_result_validator_missing_required_fields(self):
         """Verify result_validator handles incomplete data gracefully."""
-        script = SKILLS / "simulation-workflow/simulation-validator/scripts/result_validator.py"
+        script = SKILLS / (
+            "simulation-workflow/simulation-validator"
+            "/scripts/result_validator.py"
+        )
         incomplete_data = create_test_file(json.dumps({"time": [0, 1, 2]}))
         try:
-            result = run_script_expect_error(script, ["--metrics", str(incomplete_data), "--json"])
-            self.assertEqual(result.returncode, 0, "Script should handle incomplete data gracefully")
+            result = run_script_expect_error(
+                script, ["--metrics", str(incomplete_data), "--json"]
+            )
+            self.assertEqual(
+                result.returncode, 0,
+                "Script should handle incomplete data gracefully",
+            )
             output = json.loads(result.stdout)
             self.assertIsNone(
                 output["results"]["confidence_score"],
@@ -412,11 +462,16 @@ class TestNumericalStabilityErrors(unittest.TestCase):
 
     def test_stiffness_detector_invalid_matrix(self):
         """Error: invalid matrix format"""
-        script = SKILLS / "core-numerical/numerical-stability/scripts/stiffness_detector.py"
+        script = SKILLS / (
+            "core-numerical/numerical-stability"
+            "/scripts/stiffness_detector.py"
+        )
         if script.exists():
             invalid_matrix = create_test_file("not a matrix", suffix=".txt")
             try:
-                result = run_script_expect_error(script, ["--matrix", str(invalid_matrix), "--json"])
+                result = run_script_expect_error(
+                    script, ["--matrix", str(invalid_matrix), "--json"]
+                )
                 # Script will fail to load/parse invalid matrix file
                 self.assertNotEqual(result.returncode, 0, "Expected non-zero exit code")
                 output = result.stderr + result.stdout
@@ -435,7 +490,9 @@ class TestDifferentiationSchemesErrors(unittest.TestCase):
         """Error: order must be positive and even for central differences"""
         script = SKILLS / "core-numerical/differentiation-schemes/scripts/truncation_error.py"
         if script.exists():
-            result = run_script_expect_error(script, ["--order", "-2", "--scheme", "central", "--json"])
+            result = run_script_expect_error(
+                script, ["--order", "-2", "--scheme", "central", "--json"]
+            )
             # Script may not exist or may use different argument names
             if result.returncode != 0:
                 output = result.stderr + result.stdout

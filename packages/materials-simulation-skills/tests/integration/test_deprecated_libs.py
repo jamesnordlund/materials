@@ -148,7 +148,7 @@ class TestDeprecatedLibraries(unittest.TestCase):
             matches = self._search_files(pattern)
             if matches:
                 for file_path, file_matches in matches.items():
-                    for line_num, line in file_matches:
+                    for line_num, _line in file_matches:
                         found_deprecated.append(
                             f"{file_path.relative_to(REPO_ROOT)}:{line_num}: "
                             f"Found '{library}' - {recommendation}"
@@ -195,8 +195,11 @@ class TestDeprecatedLibraries(unittest.TestCase):
                     if line.strip().startswith('import ') or line.strip().startswith('from '):
                         for deprecated in DEPRECATED_LIBRARIES:
                             # Check for "import skopt" or "from skopt import"
-                            if re.search(rf'\b{deprecated.replace("-", "[_-]")}\b', line, re.IGNORECASE):
-                                deprecated_imports.append((py_file, line_num, line.strip()))
+                            dep_pat = rf'\b{deprecated.replace("-", "[_-]")}\b'
+                            if re.search(dep_pat, line, re.IGNORECASE):
+                                deprecated_imports.append(
+                                    (py_file, line_num, line.strip())
+                                )
             except (UnicodeDecodeError, PermissionError):
                 pass
 
@@ -218,11 +221,13 @@ class TestDeprecatedLibraries(unittest.TestCase):
                         continue
 
                     # Check imports in Python blocks
-                    if in_python_block:
-                        if 'import ' in line:
-                            for deprecated in DEPRECATED_LIBRARIES:
-                                if re.search(rf'\b{deprecated.replace("-", "[_-]")}\b', line, re.IGNORECASE):
-                                    deprecated_imports.append((md_file, line_num, line.strip()))
+                    if in_python_block and 'import ' in line:
+                        for deprecated in DEPRECATED_LIBRARIES:
+                            dep_pat = rf'\b{deprecated.replace("-", "[_-]")}\b'
+                            if re.search(dep_pat, line, re.IGNORECASE):
+                                deprecated_imports.append(
+                                    (md_file, line_num, line.strip())
+                                )
             except (UnicodeDecodeError, PermissionError):
                 pass
 
@@ -292,18 +297,21 @@ class TestOptionalDependencyLabeling(unittest.TestCase):
                                 context_start = max(0, block_start - 5)
                                 context = '\n'.join(lines[context_start:block_start])
 
-                                has_label = any(keyword in context.lower() for keyword in [
-                                    'optional',
-                                    'requires',
-                                    'scikit-learn',
-                                    'sklearn',
-                                ]) or any(keyword in block_text.lower() for keyword in [
-                                    '# requires',
-                                    '# optional',
-                                ])
+                                ctx_kws = [
+                                    'optional', 'requires',
+                                    'scikit-learn', 'sklearn',
+                                ]
+                                blk_kws = ['# requires', '# optional']
+                                has_label = any(
+                                    kw in context.lower() for kw in ctx_kws
+                                ) or any(
+                                    kw in block_text.lower() for kw in blk_kws
+                                )
 
                                 if not has_label:
-                                    sklearn_examples.append((md_file, block_start, block_text[:200]))
+                                    sklearn_examples.append(
+                                        (md_file, block_start, block_text[:200])
+                                    )
                     elif in_code_block:
                         block_lines.append(line)
             except (UnicodeDecodeError, PermissionError):

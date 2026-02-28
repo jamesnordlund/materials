@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
 def select_scheme(
@@ -12,7 +11,7 @@ def select_scheme(
     order: int,
     accuracy: int,
     boundary: bool,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     if order <= 0:
         raise ValueError("order must be positive")
     if accuracy <= 0:
@@ -20,9 +19,9 @@ def select_scheme(
     if discontinuous and smooth:
         raise ValueError("smooth and discontinuous cannot both be true")
 
-    recommended: List[str] = []
-    alternatives: List[str] = []
-    notes: List[str] = []
+    recommended: list[str] = []
+    alternatives: list[str] = []
+    notes: list[str] = []
 
     if discontinuous:
         recommended.append("Finite Volume (FV) with limiter/WENO")

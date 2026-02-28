@@ -1,11 +1,12 @@
 """Shared utility functions for post-processing scripts."""
 
+import contextlib
 import json
 
 
 def load_json_file(path):
     """Load and parse a JSON file."""
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -17,7 +18,7 @@ def load_csv_file(path, delimiter=","):
     """
     data = {}
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         lines = f.readlines()
 
     if not lines:
@@ -61,11 +62,8 @@ def flatten_field(field):
         for item in field:
             result.extend(flatten_field(item))
     else:
-        try:
+        with contextlib.suppress(ValueError, TypeError):
             result.append(float(field))
-        except (ValueError, TypeError):
-            # Skip non-numeric values
-            pass
     return result
 
 

@@ -3,15 +3,15 @@
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def monitor_residuals(
-    residuals: List[float],
-    function_evals: Optional[List[int]] = None,
-    step_sizes: Optional[List[float]] = None,
+    residuals: list[float],
+    function_evals: list[int] | None = None,
+    step_sizes: list[float] | None = None,
     target_tolerance: float = 1e-10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Monitor residual patterns and detect failure modes.
 
     Args:
@@ -33,18 +33,17 @@ def monitor_residuals(
         raise ValueError("target_tolerance must be positive")
 
     n = len(residuals)
-    patterns_detected: List[str] = []
-    alerts: List[str] = []
-    recommendations: List[str] = []
+    patterns_detected: list[str] = []
+    alerts: list[str] = []
+    recommendations: list[str] = []
 
     # Basic stats
     initial_residual = residuals[0]
     final_residual = residuals[-1]
 
-    if initial_residual > 1e-30:
-        residual_reduction = final_residual / initial_residual
-    else:
-        residual_reduction = 1.0
+    residual_reduction = (
+        final_residual / initial_residual if initial_residual > 1e-30 else 1.0
+    )
 
     # Check for convergence
     converged = final_residual <= target_tolerance
@@ -134,7 +133,7 @@ def monitor_residuals(
     elif not recommendations:
         recommendations.append("Continue monitoring; no immediate issues detected.")
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "residual_reduction": residual_reduction,
         "iterations": n,
         "converged": converged,
@@ -222,7 +221,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "residuals": residuals,
             "function_evals": function_evals,

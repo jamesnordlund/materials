@@ -6,7 +6,8 @@ Calculates derived quantities like interface area, volume fractions,
 gradients, fluxes, and integrals from raw simulation field data.
 
 Usage:
-    python derived_quantities.py --input field.json --quantity volume_fraction --field phi --threshold 0.5 --json
+    python derived_quantities.py --input field.json \
+        --quantity volume_fraction --field phi --threshold 0.5 --json
     python derived_quantities.py --input field.json --quantity gradient_magnitude --field phi --json
 """
 
@@ -15,15 +16,16 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, get_field_data, flatten_field, get_field_shape
+    from ._utils import flatten_field, get_field_data, get_field_shape, load_json_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
@@ -32,7 +34,7 @@ except ImportError:
     get_field_shape = _utils.get_field_shape
 
 
-def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
+def get_grid_spacing(data: dict[str, Any], shape: list[int]) -> dict[str, float]:
     """Extract or compute grid spacing."""
     spacing = {}
 
@@ -42,15 +44,12 @@ def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]
             spacing[key] = data[key]
 
     # Try to compute from domain size and shape
-    if "Lx" in data and len(shape) >= 1:
-        if shape[-1] > 1:
-            spacing["dx"] = data["Lx"] / (shape[-1] - 1)
-    if "Ly" in data and len(shape) >= 2:
-        if shape[-2] > 1:
-            spacing["dy"] = data["Ly"] / (shape[-2] - 1)
-    if "Lz" in data and len(shape) >= 3:
-        if shape[-3] > 1:
-            spacing["dz"] = data["Lz"] / (shape[-3] - 1)
+    if "Lx" in data and len(shape) >= 1 and shape[-1] > 1:
+        spacing["dx"] = data["Lx"] / (shape[-1] - 1)
+    if "Ly" in data and len(shape) >= 2 and shape[-2] > 1:
+        spacing["dy"] = data["Ly"] / (shape[-2] - 1)
+    if "Lz" in data and len(shape) >= 3 and shape[-3] > 1:
+        spacing["dz"] = data["Lz"] / (shape[-3] - 1)
 
     # Default to 1.0 if not found
     spacing.setdefault("dx", 1.0)
@@ -61,10 +60,10 @@ def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]
 
 
 def compute_volume_fraction(
-    field: List,
+    field: list,
     threshold: float = 0.5,
     above: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute volume fraction above/below threshold."""
     values = flatten_field(field)
 
@@ -89,11 +88,11 @@ def compute_volume_fraction(
 
 
 def compute_interface_area_2d(
-    field: List[List[float]],
+    field: list[list[float]],
     threshold: float,
     dx: float,
     dy: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Estimate interface area in 2D using marching squares concept."""
     ny = len(field)
     if ny == 0:
@@ -131,10 +130,10 @@ def compute_interface_area_2d(
 
 
 def compute_interface_area(
-    field: List,
+    field: list,
     threshold: float,
-    spacing: Dict[str, float]
-) -> Dict[str, Any]:
+    spacing: dict[str, float]
+) -> dict[str, Any]:
     """Compute interface area for 2D/3D fields."""
     shape = get_field_shape(field)
 
@@ -159,10 +158,10 @@ def compute_interface_area(
 
 
 def compute_gradient_2d(
-    field: List[List[float]],
+    field: list[list[float]],
     dx: float,
     dy: float
-) -> Tuple[List[List[float]], List[List[float]]]:
+) -> tuple[list[list[float]], list[list[float]]]:
     """Compute gradient of 2D field using central differences."""
     ny = len(field)
     nx = len(field[0]) if ny > 0 else 0
@@ -192,9 +191,9 @@ def compute_gradient_2d(
 
 
 def compute_gradient_magnitude(
-    field: List,
-    spacing: Dict[str, float]
-) -> Dict[str, Any]:
+    field: list,
+    spacing: dict[str, float]
+) -> dict[str, Any]:
     """Compute gradient magnitude of field."""
     shape = get_field_shape(field)
 
@@ -252,9 +251,9 @@ def compute_gradient_magnitude(
 
 
 def compute_integral(
-    field: List,
-    spacing: Dict[str, float]
-) -> Dict[str, Any]:
+    field: list,
+    spacing: dict[str, float]
+) -> dict[str, Any]:
     """Compute volume integral of field."""
     values = flatten_field(field)
     shape = get_field_shape(field)
@@ -283,7 +282,7 @@ def compute_integral(
     }
 
 
-def compute_total_variation(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
+def compute_total_variation(field: list, spacing: dict[str, float]) -> dict[str, Any]:
     """Compute total variation (sum of absolute gradients)."""
     shape = get_field_shape(field)
 
@@ -322,7 +321,7 @@ def compute_total_variation(field: List, spacing: Dict[str, float]) -> Dict[str,
     return {"error": "TV not implemented for this dimension", "shape": shape}
 
 
-def compute_mass(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
+def compute_mass(field: list, spacing: dict[str, float]) -> dict[str, Any]:
     """Compute total mass (integral of field)."""
     result = compute_integral(field, spacing)
     return {
@@ -333,7 +332,7 @@ def compute_mass(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
     }
 
 
-def compute_centroid(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
+def compute_centroid(field: list, spacing: dict[str, float]) -> dict[str, Any]:
     """Compute centroid of field (weighted by values)."""
     shape = get_field_shape(field)
 

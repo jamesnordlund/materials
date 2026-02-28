@@ -36,7 +36,7 @@ class TestSensitivitySummary(unittest.TestCase):
         result = self.mod.summarize([0.5, 0.5, 0.5], ["a", "b", "c"])
         self.assertEqual(len(result["ranking"]), 3)
         # All have same value
-        for name, score in result["ranking"]:
+        for _name, score in result["ranking"]:
             self.assertEqual(score, 0.5)
 
     def test_low_sensitivity_note(self):

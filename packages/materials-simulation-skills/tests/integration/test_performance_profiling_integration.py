@@ -10,7 +10,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).parent.parent.parent
 SCRIPTS_DIR = REPO_ROOT / 'skills' / 'simulation-workflow' / 'performance-profiling' / 'scripts'
 EXAMPLES_DIR = REPO_ROOT / 'examples' / 'performance-profiling'

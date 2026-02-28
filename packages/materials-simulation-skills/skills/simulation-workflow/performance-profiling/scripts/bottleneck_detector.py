@@ -5,11 +5,10 @@ Bottleneck Detector - Identify performance bottlenecks and recommend optimizatio
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional
 
 
-def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
-                          memory_path: Optional[str] = None) -> Dict:
+def load_analysis_results(timing_path: str, scaling_path: str | None = None,
+                          memory_path: str | None = None) -> dict:
     """
     Load analysis results from JSON files.
     
@@ -25,17 +24,19 @@ def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
     
     # Load timing data (required)
     try:
-        with open(timing_path, 'r', encoding='utf-8') as f:
+        with open(timing_path, encoding='utf-8') as f:
             results['timing'] = json.load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Timing analysis file not found: {timing_path}")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(
+            f"Timing analysis file not found: {timing_path}"
+        ) from err
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid timing JSON: {e}")
+        raise ValueError(f"Invalid timing JSON: {e}") from e
     
     # Load scaling data (optional)
     if scaling_path:
         try:
-            with open(scaling_path, 'r', encoding='utf-8') as f:
+            with open(scaling_path, encoding='utf-8') as f:
                 results['scaling'] = json.load(f)
         except FileNotFoundError:
             print(f"Warning: Scaling file not found: {scaling_path}", file=sys.stderr)
@@ -45,7 +46,7 @@ def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
     # Load memory data (optional)
     if memory_path:
         try:
-            with open(memory_path, 'r', encoding='utf-8') as f:
+            with open(memory_path, encoding='utf-8') as f:
                 results['memory'] = json.load(f)
         except FileNotFoundError:
             print(f"Warning: Memory file not found: {memory_path}", file=sys.stderr)
@@ -55,7 +56,7 @@ def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
     return results
 
 
-def detect_timing_bottlenecks(timing_data: Dict, threshold: float = 50.0) -> List[Dict]:
+def detect_timing_bottlenecks(timing_data: dict, threshold: float = 50.0) -> list[dict]:
     """
     Detect timing bottlenecks from timing analysis.
     
@@ -89,7 +90,7 @@ def detect_timing_bottlenecks(timing_data: Dict, threshold: float = 50.0) -> Lis
     return bottlenecks
 
 
-def detect_scaling_bottlenecks(scaling_data: Dict, threshold: float = 0.70) -> List[Dict]:
+def detect_scaling_bottlenecks(scaling_data: dict, threshold: float = 0.70) -> list[dict]:
     """
     Detect scaling bottlenecks from scaling analysis.
     
@@ -121,7 +122,7 @@ def detect_scaling_bottlenecks(scaling_data: Dict, threshold: float = 0.70) -> L
     return bottlenecks
 
 
-def detect_memory_bottlenecks(memory_data: Dict, threshold: float = 0.80) -> List[Dict]:
+def detect_memory_bottlenecks(memory_data: dict, threshold: float = 0.80) -> list[dict]:
     """
     Detect memory bottlenecks from memory profile.
     
@@ -154,7 +155,9 @@ def detect_memory_bottlenecks(memory_data: Dict, threshold: float = 0.80) -> Lis
     return bottlenecks
 
 
-def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict] = None) -> List[Dict]:
+def generate_recommendations(
+    bottlenecks: list[dict], timing_data: dict | None = None
+) -> list[dict]:
     """
     Generate optimization recommendations based on bottlenecks.
     
@@ -186,7 +189,10 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 recommendations.append({
                     'priority': 'high',
                     'category': 'solver',
-                    'issue': f"{bottleneck['phase']} dominates runtime ({bottleneck['value']:.1f}%)",
+                    'issue': (
+                        f"{bottleneck['phase']} dominates runtime"
+                        f" ({bottleneck['value']:.1f}%)"
+                    ),
                     'strategies': [
                         'Use algebraic multigrid (AMG) preconditioner',
                         'Relax solver tolerance if over-solving',
@@ -200,7 +206,10 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 recommendations.append({
                     'priority': 'high',
                     'category': 'assembly',
-                    'issue': f"{bottleneck['phase']} dominates runtime ({bottleneck['value']:.1f}%)",
+                    'issue': (
+                        f"{bottleneck['phase']} dominates runtime"
+                        f" ({bottleneck['value']:.1f}%)"
+                    ),
                     'strategies': [
                         'Cache element matrices if geometry is static',
                         'Use vectorized assembly routines',
@@ -214,7 +223,10 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 recommendations.append({
                     'priority': 'medium',
                     'category': 'io',
-                    'issue': f"{bottleneck['phase']} dominates runtime ({bottleneck['value']:.1f}%)",
+                    'issue': (
+                        f"{bottleneck['phase']} dominates runtime"
+                        f" ({bottleneck['value']:.1f}%)"
+                    ),
                     'strategies': [
                         'Reduce output frequency',
                         'Use parallel I/O (HDF5, MPI-IO)',
@@ -228,7 +240,10 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 recommendations.append({
                     'priority': 'medium',
                     'category': 'general',
-                    'issue': f"{bottleneck['phase']} dominates runtime ({bottleneck['value']:.1f}%)",
+                    'issue': (
+                        f"{bottleneck['phase']} dominates runtime"
+                        f" ({bottleneck['value']:.1f}%)"
+                    ),
                     'strategies': [
                         'Profile this phase in detail',
                         'Look for algorithmic improvements',
@@ -326,22 +341,22 @@ def main():
             }
             print(json.dumps(output, indent=2))
         else:
-            print(f"Bottleneck Analysis")
-            print(f"=" * 60)
+            print("Bottleneck Analysis")
+            print("=" * 60)
             
             if bottlenecks:
-                print(f"\nDetected Bottlenecks:")
+                print("\nDetected Bottlenecks:")
                 for bottleneck in bottlenecks:
                     print(f"  [{bottleneck['severity'].upper()}] {bottleneck['phase']}: "
                           f"{bottleneck['metric']} = {bottleneck['value']:.2f}")
             else:
                 print("\nNo significant bottlenecks detected")
             
-            print(f"\nRecommendations:")
+            print("\nRecommendations:")
             for rec in recommendations:
                 print(f"\n  [{rec['priority'].upper()}] {rec['category'].upper()}")
                 print(f"  Issue: {rec['issue']}")
-                print(f"  Strategies:")
+                print("  Strategies:")
                 for strategy in rec['strategies']:
                     print(f"    - {strategy}")
     

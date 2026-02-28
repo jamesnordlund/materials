@@ -2,10 +2,9 @@
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional
 
 
-def fornberg_coefficients(x: List[float], x0: float, m: int) -> List[float]:
+def fornberg_coefficients(x: list[float], x0: float, m: int) -> list[float]:
     n = len(x)
     if n == 0:
         raise ValueError("x list must be non-empty")
@@ -36,7 +35,7 @@ def fornberg_coefficients(x: List[float], x0: float, m: int) -> List[float]:
     return [c[i][m] for i in range(n)]
 
 
-def stencil_offsets(order: int, accuracy: int, scheme: str) -> List[int]:
+def stencil_offsets(order: int, accuracy: int, scheme: str) -> list[int]:
     if order <= 0:
         raise ValueError("order must be positive")
     if accuracy <= 0:
@@ -62,8 +61,8 @@ def generate_stencil(
     accuracy: int,
     scheme: str,
     dx: float,
-    offsets: Optional[List[int]],
-) -> Dict[str, object]:
+    offsets: list[int] | None,
+) -> dict[str, object]:
     if dx <= 0:
         raise ValueError("dx must be positive")
     if offsets is None:
@@ -82,7 +81,7 @@ def generate_stencil(
     }
 
 
-def parse_offsets(raw: str) -> List[int]:
+def parse_offsets(raw: str) -> list[int]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("offset list must be a comma-separated list")

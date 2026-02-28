@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import math
 import sys
-from typing import Dict, List
 
 
-def schedule_outputs(t_start: float, t_end: float, interval: float, max_outputs: int) -> Dict[str, object]:
+def schedule_outputs(
+    t_start: float, t_end: float, interval: float, max_outputs: int
+) -> dict[str, object]:
     if t_end <= t_start:
         raise ValueError("t_end must be greater than t_start")
     if interval <= 0:
@@ -14,7 +14,7 @@ def schedule_outputs(t_start: float, t_end: float, interval: float, max_outputs:
     if max_outputs <= 0:
         raise ValueError("max_outputs must be positive")
 
-    times: List[float] = []
+    times: list[float] = []
     t = t_start
     while t <= t_end + 1e-12 and len(times) < max_outputs:
         times.append(t)

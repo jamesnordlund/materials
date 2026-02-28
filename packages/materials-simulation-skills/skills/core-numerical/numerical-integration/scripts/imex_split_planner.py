@@ -2,10 +2,9 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 
-def parse_terms(raw: str) -> List[str]:
+def parse_terms(raw: str) -> list[str]:
     if raw is None:
         return []
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -13,13 +12,13 @@ def parse_terms(raw: str) -> List[str]:
 
 
 def plan_imex(
-    stiff_terms: List[str],
-    nonstiff_terms: List[str],
+    stiff_terms: list[str],
+    nonstiff_terms: list[str],
     coupling: str,
     accuracy: str,
     stiffness_ratio: float,
     conservative: bool,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     if coupling not in {"weak", "moderate", "strong"}:
         raise ValueError("coupling must be weak, moderate, or strong")
     if accuracy not in {"low", "medium", "high"}:
@@ -32,8 +31,8 @@ def plan_imex(
     implicit_terms = stiff_terms
     explicit_terms = nonstiff_terms
 
-    notes: List[str] = []
-    recommended: List[str] = []
+    notes: list[str] = []
+    recommended: list[str] = []
     if stiff_terms and nonstiff_terms:
         recommended.append("IMEX-ARK")
         recommended.append("SBDF (semi-implicit BDF)")

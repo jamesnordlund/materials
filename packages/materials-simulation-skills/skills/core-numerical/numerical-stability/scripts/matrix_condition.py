@@ -3,13 +3,11 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, Optional, Union
 
 import numpy as np
 import scipy.io
 import scipy.sparse
 import scipy.sparse.linalg
-
 
 # Enable import of shared utilities from skills/_shared/
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
@@ -47,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_norm(value: str) -> Union[float, str]:
+def parse_norm(value: str) -> float | str:
     value = value.strip().lower()
     if value in {"2", "1", "-1"}:
         return float(value)
@@ -57,11 +55,11 @@ def parse_norm(value: str) -> Union[float, str]:
 
 
 def compute_condition(
-    matrix: Union[np.ndarray, scipy.sparse.spmatrix],
-    norm: Union[float, str],
+    matrix: np.ndarray | scipy.sparse.spmatrix,
+    norm: float | str,
     symmetry_tol: float,
     skip_eigs: bool,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """Compute condition number and eigenvalue spread.
 
     Supports both dense and sparse matrices.
@@ -101,15 +99,20 @@ def compute_condition(
                 # Matrix too small for svds
                 cond = float(np.linalg.cond(matrix.toarray(), p=2))
             else:
-                s_max = scipy.sparse.linalg.svds(matrix, k=k, which='LM', return_singular_vectors=False)
-                s_min = scipy.sparse.linalg.svds(matrix, k=k, which='SM', return_singular_vectors=False)
+                s_max = scipy.sparse.linalg.svds(
+                    matrix, k=k, which='LM', return_singular_vectors=False
+                )
+                s_min = scipy.sparse.linalg.svds(
+                    matrix, k=k, which='SM', return_singular_vectors=False
+                )
                 cond = float(np.max(s_max) / np.min(s_min))
         except (scipy.sparse.linalg.ArpackNoConvergence, scipy.sparse.linalg.ArpackError):
             # If svds fails, fall back to dense computation for small matrices
-            if n <= 1000:
-                cond = float(np.linalg.cond(matrix.toarray(), p=2))
-            else:
-                cond = float("inf")
+            cond = (
+                float(np.linalg.cond(matrix.toarray(), p=2))
+                if n <= 1000
+                else float("inf")
+            )
     else:
         # Dense case (original behavior)
         if not np.all(np.isfinite(matrix)):

@@ -2,21 +2,25 @@
 import argparse
 import json
 import sys
-from typing import Dict, List
 
 import numpy as np
-from scipy.interpolate import RBFInterpolator
 from numpy.polynomial import Polynomial
+from scipy.interpolate import RBFInterpolator
 
 
-def parse_list(raw: str) -> List[float]:
+def parse_list(raw: str) -> list[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("value list must be a comma-separated list")
     return [float(p) for p in parts]
 
 
-def build_surrogate(x: List[float], y: List[float], model: str, rbf_epsilon: float = None) -> Dict[str, object]:
+def build_surrogate(
+    x: list[float],
+    y: list[float],
+    model: str,
+    rbf_epsilon: float = None,
+) -> dict[str, object]:
     """Build and fit a surrogate model (RBF or polynomial).
 
     Args:
@@ -44,17 +48,25 @@ def build_surrogate(x: List[float], y: List[float], model: str, rbf_epsilon: flo
     pop_var = float(np.var(y_arr))
     n_samples = len(x)
 
-    notes = ["Using SciPy RBF/polynomial models. Consider Gaussian process surrogates for production use."]
+    notes = [
+        "Using SciPy RBF/polynomial models."
+        " Consider Gaussian process surrogates for production use."
+    ]
 
     if model == "rbf":
         # Auto-compute epsilon if not provided: use average distance between samples
         if rbf_epsilon is None:
             x_std = float(np.std(x_arr))
             rbf_epsilon = x_std if x_std > 0 else 1.0
-            notes.append(f"Auto-computed epsilon={rbf_epsilon:.4g} from data scale (std={x_std:.4g})")
+            notes.append(
+                f"Auto-computed epsilon={rbf_epsilon:.4g}"
+                f" from data scale (std={x_std:.4g})"
+            )
 
         # Fit RBF model with multiquadric kernel
-        rbf_model = RBFInterpolator(x_arr.reshape(-1, 1), y_arr, kernel="multiquadric", epsilon=rbf_epsilon)
+        rbf_model = RBFInterpolator(
+            x_arr.reshape(-1, 1), y_arr, kernel="multiquadric", epsilon=rbf_epsilon
+        )
         y_pred = rbf_model(x_arr.reshape(-1, 1))
         ss_res = np.sum((y_arr - y_pred) ** 2)
         mse = float(ss_res / n_samples)
@@ -101,7 +113,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--x", required=True, help="Comma-separated input values")
     parser.add_argument("--y", required=True, help="Comma-separated output values")
     parser.add_argument("--model", choices=["rbf", "poly"], default="rbf", help="Surrogate type")
-    parser.add_argument("--rbf-epsilon", type=float, default=None, help="RBF epsilon parameter (default: auto-computed from data scale)")
+    parser.add_argument(
+        "--rbf-epsilon",
+        type=float,
+        default=None,
+        help="RBF epsilon parameter (default: auto-computed from data scale)",
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     return parser.parse_args()
 

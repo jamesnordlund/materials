@@ -6,7 +6,8 @@ specified ranges. Supports grid (full factorial), linspace (uniform), and
 LHS (Latin Hypercube Sampling) methods.
 
 Usage:
-    python sweep_generator.py --base-config sim.json --params "dt:1e-4:1e-2:5" --method linspace --output-dir ./sweep
+    python sweep_generator.py --base-config sim.json \
+        --params "dt:1e-4:1e-2:5" --method linspace --output-dir ./sweep
 
 Output (JSON):
     {
@@ -23,12 +24,14 @@ import json
 import os
 import random
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 # Import path validation from shared module
 try:
     from skills._shared._path_validation import (
-        add_sandbox_args, resolve_sandbox_root, validate_all_paths,
+        add_sandbox_args,
+        resolve_sandbox_root,
+        validate_all_paths,
     )
 except ImportError:
     import importlib.util as _ilu
@@ -43,7 +46,7 @@ except ImportError:
     validate_all_paths = _pv_mod.validate_all_paths
 
 
-def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
+def parse_param_spec(spec: str) -> tuple[str, float, float, int]:
     """Parse parameter specification string.
 
     Formats:
@@ -66,13 +69,13 @@ def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
         )
 
 
-def parse_params(params_str: str) -> List[Tuple[str, float, float, int]]:
+def parse_params(params_str: str) -> list[tuple[str, float, float, int]]:
     """Parse comma-separated parameter specifications."""
     specs = [s.strip() for s in params_str.split(",") if s.strip()]
     return [parse_param_spec(s) for s in specs]
 
 
-def linspace(start: float, stop: float, count: int) -> List[float]:
+def linspace(start: float, stop: float, count: int) -> list[float]:
     """Generate linearly spaced values."""
     if count <= 1:
         return [start]
@@ -80,21 +83,21 @@ def linspace(start: float, stop: float, count: int) -> List[float]:
     return [start + i * step for i in range(count)]
 
 
-def generate_grid(params: List[Tuple[str, float, float, int]]) -> List[Dict[str, float]]:
+def generate_grid(params: list[tuple[str, float, float, int]]) -> list[dict[str, float]]:
     """Generate full factorial grid of parameter combinations."""
     param_names = [p[0] for p in params]
     param_values = [linspace(p[1], p[2], p[3]) for p in params]
 
     configs = []
     for combo in itertools.product(*param_values):
-        configs.append(dict(zip(param_names, combo)))
+        configs.append(dict(zip(param_names, combo, strict=True)))
 
     return configs
 
 
 def generate_linspace(
-    params: List[Tuple[str, float, float, int]]
-) -> Tuple[List[Dict[str, float]], Dict[str, List[float]]]:
+    params: list[tuple[str, float, float, int]]
+) -> tuple[list[dict[str, float]], dict[str, list[float]]]:
     """Generate grid sweep using linspace for each parameter.
 
     Note: This method is identical to generate_grid() - it creates a full
@@ -108,15 +111,15 @@ def generate_linspace(
 
 
 def generate_lhs(
-    params: List[Tuple[str, float, float, int]], samples: int, seed: int = 42
-) -> Tuple[List[Dict[str, float]], Dict[str, List[float]]]:
+    params: list[tuple[str, float, float, int]], samples: int, seed: int = 42
+) -> tuple[list[dict[str, float]], dict[str, list[float]]]:
     """Generate Latin Hypercube Sampling configurations."""
     random.seed(seed)
     n_params = len(params)
 
     # Create intervals for each dimension
     configs = []
-    param_space: Dict[str, List[float]] = {p[0]: [] for p in params}
+    param_space: dict[str, list[float]] = {p[0]: [] for p in params}
 
     # Generate LHS: each parameter range divided into n intervals,
     # one sample per interval, randomly ordered
@@ -142,13 +145,13 @@ def generate_lhs(
     return configs, param_space
 
 
-def load_base_config(path: str) -> Dict[str, Any]:
+def load_base_config(path: str) -> dict[str, Any]:
     """Load base configuration file."""
-    with open(path, "r") as f:
+    with open(path) as f:
         return json.load(f)
 
 
-def merge_config(base: Dict[str, Any], overrides: Dict[str, float]) -> Dict[str, Any]:
+def merge_config(base: dict[str, Any], overrides: dict[str, float]) -> dict[str, Any]:
     """Merge override parameters into base config."""
     result = base.copy()
     result.update(overrides)
@@ -156,10 +159,10 @@ def merge_config(base: Dict[str, Any], overrides: Dict[str, float]) -> Dict[str,
 
 
 def write_configs(
-    base_config: Dict[str, Any],
-    param_configs: List[Dict[str, float]],
+    base_config: dict[str, Any],
+    param_configs: list[dict[str, float]],
     output_dir: str,
-) -> List[str]:
+) -> list[str]:
     """Write configuration files to output directory."""
     os.makedirs(output_dir, exist_ok=True)
     written = []
@@ -183,7 +186,7 @@ def generate_sweep(
     samples: int = 10,
     seed: int = 42,
     force: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate parameter sweep configurations.
 
     Args:

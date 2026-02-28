@@ -21,27 +21,27 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
-def load_campaign(config_dir: str) -> Dict[str, Any]:
+def load_campaign(config_dir: str) -> dict[str, Any]:
     """Load campaign state from config directory."""
     campaign_path = os.path.join(config_dir, "campaign.json")
     if not os.path.exists(campaign_path):
         raise ValueError(f"Campaign not found: {campaign_path}")
-    with open(campaign_path, "r") as f:
+    with open(campaign_path) as f:
         return json.load(f)
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """Load a configuration file."""
     if not os.path.exists(config_path):
         return {}
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         return json.load(f)
 
 
-def find_result_file(job: Dict[str, Any], config_dir: str) -> Optional[str]:
+def find_result_file(job: dict[str, Any], config_dir: str) -> str | None:
     """Find the result file for a job.
 
     Args:
@@ -72,13 +72,13 @@ def find_result_file(job: Dict[str, Any], config_dir: str) -> Optional[str]:
     return None
 
 
-def load_result(result_path: str) -> Dict[str, Any]:
+def load_result(result_path: str) -> dict[str, Any]:
     """Load a result file."""
-    with open(result_path, "r") as f:
+    with open(result_path) as f:
         return json.load(f)
 
 
-def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
+def extract_metric(result: dict[str, Any], metric: str) -> float | None:
     """Extract a metric value from a result dictionary.
 
     Supports nested keys like "results.objective" via dot notation.
@@ -104,7 +104,7 @@ def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
     return None
 
 
-def compute_statistics(values: List[float]) -> Dict[str, Optional[float]]:
+def compute_statistics(values: list[float]) -> dict[str, float | None]:
     """Compute basic statistics for a list of values.
 
     Args:
@@ -144,7 +144,7 @@ def aggregate_results(
     config_dir: str,
     metric: str,
     minimize: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Aggregate results from all completed jobs.
 
     Args:
@@ -185,7 +185,7 @@ def aggregate_results(
                     "params": config,
                 })
                 completed_count += 1
-        except (json.JSONDecodeError, IOError):
+        except (OSError, json.JSONDecodeError):
             failed_runs.append(job_id)
 
     # Compute statistics
@@ -224,7 +224,7 @@ def aggregate_results(
     }
 
 
-def export_table(results: Dict[str, Any], output_path: str) -> None:
+def export_table(results: dict[str, Any], output_path: str) -> None:
     """Export results to a CSV-like table.
 
     Args:
@@ -315,12 +315,14 @@ def main() -> None:
             print(json.dumps(output, indent=2))
         else:
             print(f"Metric: {args.metric}")
-            print(f"Completed: {results['summary']['completed']} / {results['summary']['total_jobs']}")
+            completed = results['summary']['completed']
+            total = results['summary']['total_jobs']
+            print(f"Completed: {completed} / {total}")
             print(f"Failed: {results['summary']['failed']}")
             print()
             stats = results["statistics"]
             if stats["mean"] is not None:
-                print(f"Statistics:")
+                print("Statistics:")
                 print(f"  Min: {stats['min']:.6g}")
                 print(f"  Max: {stats['max']:.6g}")
                 print(f"  Mean: {stats['mean']:.6g}")
@@ -328,7 +330,8 @@ def main() -> None:
                 print(f"  Median: {stats['median']:.6g}")
             if results["best_run"]:
                 print()
-                print(f"Best run: {results['best_run']['job_id']} = {results['best_run']['value']:.6g}")
+                best = results['best_run']
+                print(f"Best run: {best['job_id']} = {best['value']:.6g}")
 
     except ValueError as e:
         print(str(e), file=sys.stderr)

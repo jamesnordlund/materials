@@ -3,18 +3,16 @@ import argparse
 import json
 import os
 import sys
-from typing import Optional, Union
 
 import numpy as np
 import scipy.sparse
-
 
 # Enable import of shared utilities from skills/_shared/
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 from _shared._matrix_io import load_matrix  # noqa: E402
 
 
-def compute_stats(matrix: Union[np.ndarray, scipy.sparse.spmatrix], symmetry_tol: float) -> dict:
+def compute_stats(matrix: np.ndarray | scipy.sparse.spmatrix, symmetry_tol: float) -> dict:
     """Compute sparsity statistics for a matrix.
 
     Supports both dense numpy arrays and sparse scipy matrices.
@@ -56,10 +54,7 @@ def compute_stats(matrix: Union[np.ndarray, scipy.sparse.spmatrix], symmetry_tol
     else:
         rows, cols = np.nonzero(matrix)
 
-    if rows.size:
-        bandwidth = int(np.max(np.abs(rows - cols)))
-    else:
-        bandwidth = 0
+    bandwidth = int(np.max(np.abs(rows - cols))) if rows.size else 0
 
     # Symmetry check - for sparse, convert to dense only for check (or skip for very large)
     if is_sparse and m > 10000:

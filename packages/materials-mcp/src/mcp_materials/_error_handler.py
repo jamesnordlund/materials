@@ -10,6 +10,7 @@ issues between this module, ``contribs_tools``, and ``_validation``.
 
 from __future__ import annotations
 
+import asyncio
 import functools
 from collections.abc import Callable, Coroutine
 from typing import Any
@@ -55,7 +56,7 @@ def contribs_error_handler(entity_type: str) -> Callable:
 
             try:
                 return await fn(*args, **kwargs)
-            except TimeoutError:
+            except (TimeoutError, asyncio.TimeoutError):
                 # asyncio.TimeoutError is an alias for the builtin
                 # TimeoutError in Python 3.11+.
                 from mcp_materials.contribs_tools import _TIMEOUT_MSG, API_TIMEOUT

@@ -20,7 +20,6 @@ Typical usage inside a CLI script::
 from __future__ import annotations
 
 import os
-from typing import Optional, Union
 
 import numpy as np
 import scipy.io
@@ -29,8 +28,8 @@ import scipy.sparse
 
 def load_matrix(
     path: str,
-    delimiter: Optional[str] = None,
-) -> Union[np.ndarray, scipy.sparse.spmatrix]:
+    delimiter: str | None = None,
+) -> np.ndarray | scipy.sparse.spmatrix:
     """Load a matrix from file, auto-detecting the format.
 
     Parameters

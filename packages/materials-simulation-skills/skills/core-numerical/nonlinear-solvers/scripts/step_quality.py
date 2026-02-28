@@ -3,7 +3,7 @@
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def evaluate_step(
@@ -11,8 +11,8 @@ def evaluate_step(
     actual_reduction: float,
     step_norm: float,
     gradient_norm: float,
-    trust_radius: Optional[float] = None,
-) -> Dict[str, Any]:
+    trust_radius: float | None = None,
+) -> dict[str, Any]:
     """Evaluate step quality for trust region management.
 
     The Cauchy decrease condition requires that the step achieves at least
@@ -45,7 +45,7 @@ def evaluate_step(
     if trust_radius is not None and trust_radius <= 0:
         raise ValueError("trust_radius must be positive")
 
-    notes: List[str] = []
+    notes: list[str] = []
 
     # Compute the ratio (actual/predicted reduction)
     if predicted_reduction > 1e-30:
@@ -121,7 +121,9 @@ def evaluate_step(
     # Proper formula: m(0) - m(s_cp) >= (1/2) * ||g|| * min(Delta, ||g||/||B*g||)
     # Using step_norm as an approximation for the Hessian-scaled gradient
     if trust_radius is not None:
-        cauchy_decrease_expected = 0.5 * gradient_norm * min(trust_radius, gradient_norm / max(step_norm, 1e-14))
+        cauchy_decrease_expected = 0.5 * gradient_norm * min(
+            trust_radius, gradient_norm / max(step_norm, 1e-14)
+        )
     else:
         cauchy_decrease_expected = 0.5 * gradient_norm * min(step_norm, gradient_norm)
 
@@ -192,7 +194,7 @@ def main() -> None:
         print(str(exc), file=sys.stderr)
         sys.exit(2)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "inputs": {
             "predicted_reduction": args.predicted_reduction,
             "actual_reduction": args.actual_reduction,

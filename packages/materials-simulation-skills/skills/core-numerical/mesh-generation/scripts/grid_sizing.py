@@ -3,15 +3,14 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, Optional
 
 
 def compute_grid(
     length: float,
     resolution: int,
     dims: int,
-    dx: Optional[float],
-) -> Dict[str, object]:
+    dx: float | None,
+) -> dict[str, object]:
     if length <= 0:
         raise ValueError("length must be positive")
     if resolution <= 0:

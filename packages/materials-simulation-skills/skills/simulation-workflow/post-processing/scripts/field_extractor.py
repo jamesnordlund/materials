@@ -14,15 +14,17 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 # Import shared utilities
 try:
-    from ._utils import load_json_file, load_csv_file as _load_csv_file, flatten_field, get_field_shape
+    from ._utils import flatten_field, get_field_shape, load_json_file
+    from ._utils import load_csv_file as _load_csv_file
 except ImportError:
     # Fallback for standalone execution
     import importlib.util
-    spec = importlib.util.spec_from_file_location("_utils", os.path.join(os.path.dirname(__file__), "_utils.py"))
+    _utils_path = os.path.join(os.path.dirname(__file__), "_utils.py")
+    spec = importlib.util.spec_from_file_location("_utils", _utils_path)
     _utils = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(_utils)
     load_json_file = _utils.load_json_file
@@ -31,13 +33,13 @@ except ImportError:
     get_field_shape = _utils.get_field_shape
 
 
-def load_csv_file(path: str) -> Dict[str, Any]:
+def load_csv_file(path: str) -> dict[str, Any]:
     """Load CSV file with data wrapped in _data key for consistent field access."""
     csv_data = _load_csv_file(path)
     return {"_data": csv_data}
 
 
-def load_data_file(filepath: str) -> Dict[str, Any]:
+def load_data_file(filepath: str) -> dict[str, Any]:
     """Load data file based on extension."""
     if filepath.endswith(".json"):
         return load_json_file(filepath)
@@ -47,7 +49,7 @@ def load_data_file(filepath: str) -> Dict[str, Any]:
         raise ValueError(f"Unsupported file format: {filepath}")
 
 
-def list_available_fields(data: Dict[str, Any]) -> List[str]:
+def list_available_fields(data: dict[str, Any]) -> list[str]:
     """List available field names in data."""
     fields = []
 
@@ -64,7 +66,7 @@ def list_available_fields(data: Dict[str, Any]) -> List[str]:
     return sorted(set(fields))
 
 
-def list_available_files(directory: str) -> List[Dict[str, Any]]:
+def list_available_files(directory: str) -> list[dict[str, Any]]:
     """List available data files in directory."""
     files = []
 
@@ -82,7 +84,7 @@ def list_available_files(directory: str) -> List[Dict[str, Any]]:
     return sorted(files, key=lambda x: x["filename"])
 
 
-def extract_field(data: Dict[str, Any], field_name: str) -> Optional[Dict[str, Any]]:
+def extract_field(data: dict[str, Any], field_name: str) -> dict[str, Any] | None:
     """Extract a specific field from data."""
     field_data = None
 
@@ -136,9 +138,9 @@ get_shape = get_field_shape
 
 
 def extract_multiple_fields(
-    data: Dict[str, Any],
-    field_names: List[str]
-) -> Dict[str, Any]:
+    data: dict[str, Any],
+    field_names: list[str]
+) -> dict[str, Any]:
     """Extract multiple fields from data."""
     results = {"fields": {}}
 
@@ -152,7 +154,7 @@ def extract_multiple_fields(
     return results
 
 
-def get_timestep_info(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def get_timestep_info(data: dict[str, Any]) -> dict[str, Any] | None:
     """Extract timestep/time information from data."""
     info = {}
 

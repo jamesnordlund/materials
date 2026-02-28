@@ -3,21 +3,42 @@ import argparse
 import json
 import re
 import sys
-from typing import Dict, List
-
 
 PATTERNS = [
-    (re.compile(r"nan|inf|overflow", re.IGNORECASE), "Numerical blow-up", "Reduce dt, tighten tolerances, or increase damping."),
-    (re.compile(r"residual\s*(?:increas|blow|explod|diverg|not\s+decreas)", re.IGNORECASE), "Convergence failure", "Check solver/preconditioner settings and matrix conditioning."),
-    (re.compile(r"\bdiverg\w*\b", re.IGNORECASE), "Convergence failure", "Reduce dt, check boundary conditions, or improve initial guess."),
-    (re.compile(r"out of memory|allocation failed", re.IGNORECASE), "Memory exhaustion", "Reduce resolution or enable out-of-core options."),
-    (re.compile(r"disk full|permission denied", re.IGNORECASE), "I/O error", "Check disk space and permissions."),
+    (
+        re.compile(r"nan|inf|overflow", re.IGNORECASE),
+        "Numerical blow-up",
+        "Reduce dt, tighten tolerances, or increase damping.",
+    ),
+    (
+        re.compile(
+            r"residual\s*(?:increas|blow|explod|diverg|not\s+decreas)",
+            re.IGNORECASE,
+        ),
+        "Convergence failure",
+        "Check solver/preconditioner settings and matrix conditioning.",
+    ),
+    (
+        re.compile(r"\bdiverg\w*\b", re.IGNORECASE),
+        "Convergence failure",
+        "Reduce dt, check boundary conditions, or improve initial guess.",
+    ),
+    (
+        re.compile(r"out of memory|allocation failed", re.IGNORECASE),
+        "Memory exhaustion",
+        "Reduce resolution or enable out-of-core options.",
+    ),
+    (
+        re.compile(r"disk full|permission denied", re.IGNORECASE),
+        "I/O error",
+        "Check disk space and permissions.",
+    ),
 ]
 
 
-def diagnose(log_text: str) -> Dict[str, object]:
-    causes: List[str] = []
-    fixes: List[str] = []
+def diagnose(log_text: str) -> dict[str, object]:
+    causes: list[str] = []
+    fixes: list[str] = []
     for pattern, cause, fix in PATTERNS:
         if pattern.search(log_text):
             causes.append(cause)
@@ -41,7 +62,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     try:
-        with open(args.log, "r", encoding="utf-8") as handle:
+        with open(args.log, encoding="utf-8") as handle:
             text = handle.read()
         result = diagnose(text)
     except OSError as exc:
@@ -55,7 +76,7 @@ def main() -> None:
         return
 
     print("Failure diagnosis")
-    for cause, fix in zip(result["probable_causes"], result["recommended_fixes"]):
+    for cause, fix in zip(result["probable_causes"], result["recommended_fixes"], strict=False):
         print(f"  cause: {cause}")
         print(f"  fix: {fix}")
 

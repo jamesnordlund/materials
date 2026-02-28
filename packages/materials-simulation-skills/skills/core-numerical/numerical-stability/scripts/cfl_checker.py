@@ -3,7 +3,6 @@ import argparse
 import json
 import math
 import sys
-from typing import Dict, List, Optional
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,17 +33,17 @@ def parse_args() -> argparse.Namespace:
 def compute_cfl(
     dx: float,
     dt: float,
-    velocity: Optional[float],
-    diffusivity: Optional[float],
-    reaction_rate: Optional[float],
+    velocity: float | None,
+    diffusivity: float | None,
+    reaction_rate: float | None,
     dimensions: int,
     scheme: str,
-    advection_limit: Optional[float],
-    diffusion_limit: Optional[float],
-    reaction_limit: Optional[float],
+    advection_limit: float | None,
+    diffusion_limit: float | None,
+    reaction_limit: float | None,
     safety: float,
-) -> Dict[str, object]:
-    notes: List[str] = []
+) -> dict[str, object]:
+    notes: list[str] = []
     if dx <= 0 or dt <= 0:
         raise ValueError("dx and dt must be positive")
     if dimensions <= 0:
@@ -90,8 +89,8 @@ def compute_cfl(
     elif k == 0:
         react = 0.0
 
-    criteria_applied: List[str] = []
-    stable: Optional[bool] = True
+    criteria_applied: list[str] = []
+    stable: bool | None = True
     if scheme == "explicit":
         if cfl is not None and math.isfinite(advection_limit):
             criteria_applied.append("advection")
