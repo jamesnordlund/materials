@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "script": "build_manifest.py",
+    "version": "1.0.0"
+  },
+  "manifest": {
+    "inputs": {
+      "input_hash": "__COMPUTED_AT_TEST_TIME__",
+      "tool_calls_count": 2
+    },
+    "tool_calls": [
+      {
+        "tool_name": "mp_provenance_get",
+        "args": {"material_id": "mp-149"},
+        "response_hash": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f9011223344"
+      },
+      {
+        "tool_name": "mp_tasks_get",
+        "args": {"material_id": "mp-149"},
+        "response_hash": "sha256:f6e5d4c3b2a10987fedc6543ba2109876655aabb"
+      }
+    ],
+    "db_version": null,
+    "timestamps": {
+      "generated_at": "__DYNAMIC__"
+    },
+    "hash_of_outputs": "__COMPUTED_AT_TEST_TIME__"
+  },
+  "_test_notes": {
+    "description": "Expected manifest structure for validation. Fields marked __COMPUTED_AT_TEST_TIME__ are verified by computing from the input fixture. The generated_at timestamp is dynamic and checked for ISO-8601 format only.",
+    "required_top_level_keys": ["metadata", "manifest"],
+    "required_manifest_keys": ["inputs", "tool_calls", "db_version", "timestamps", "hash_of_outputs"],
+    "required_metadata_keys": ["script", "version"],
+    "required_input_keys": ["input_hash", "tool_calls_count"]
+  }
+}

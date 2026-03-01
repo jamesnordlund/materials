@@ -1,0 +1,36 @@
+[
+  {
+    "battery_id": "mp-1234567",
+    "battery_formula": "Li4(FePO4)4",
+    "framework_formula": "FePO4",
+    "working_ion": "Li",
+    "num_steps": 1,
+    "max_delta_volume": 6.5,
+    "average_voltage": 3.45,
+    "capacity_grav": 170.2,
+    "capacity_vol": 590.1,
+    "energy_grav": 587.2,
+    "energy_vol": 2035.8,
+    "stability_charge": 0.0,
+    "stability_discharge": 0.012,
+    "material_ids": ["mp-19017", "mp-25532"],
+    "formula_pretty": "LiFePO4"
+  },
+  {
+    "battery_id": "mp-2345678",
+    "battery_formula": "Li2(MnO2)2",
+    "framework_formula": "MnO2",
+    "working_ion": "Li",
+    "num_steps": 2,
+    "max_delta_volume": 8.2,
+    "average_voltage": 3.0,
+    "capacity_grav": 285.4,
+    "capacity_vol": 1280.0,
+    "energy_grav": 856.2,
+    "energy_vol": 3840.0,
+    "stability_charge": 0.05,
+    "stability_discharge": 0.0,
+    "material_ids": ["mp-18767", "mp-19395"],
+    "formula_pretty": "LiMnO2"
+  }
+]

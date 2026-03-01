@@ -129,7 +129,7 @@ async def search_materials(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -180,7 +180,7 @@ async def get_structure(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -248,7 +248,7 @@ async def get_properties(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -320,7 +320,7 @@ async def compare_materials(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -398,7 +398,7 @@ async def search_by_elements(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -483,7 +483,7 @@ async def search_by_band_gap(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -569,7 +569,7 @@ async def get_similar_structures(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -666,7 +666,7 @@ async def get_phase_diagram(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -782,7 +782,7 @@ async def get_elastic_properties(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))
@@ -878,7 +878,7 @@ async def search_by_elastic_properties(
         return await asyncio.wait_for(
             asyncio.to_thread(_query), timeout=API_TIMEOUT
         )
-    except (TimeoutError, asyncio.TimeoutError):
+    except TimeoutError:
         return _error_response(_TIMEOUT_MSG.format(timeout=API_TIMEOUT))
     except Exception as e:
         return _error_response(str(e))

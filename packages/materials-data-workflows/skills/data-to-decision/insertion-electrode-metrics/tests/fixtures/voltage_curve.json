@@ -1,0 +1,23 @@
+[
+  {"x": 0.00, "voltage_V": 3.60},
+  {"x": 0.05, "voltage_V": 3.52},
+  {"x": 0.10, "voltage_V": 3.46},
+  {"x": 0.15, "voltage_V": 3.45},
+  {"x": 0.20, "voltage_V": 3.45},
+  {"x": 0.25, "voltage_V": 3.44},
+  {"x": 0.30, "voltage_V": 3.45},
+  {"x": 0.35, "voltage_V": 3.45},
+  {"x": 0.40, "voltage_V": 3.44},
+  {"x": 0.45, "voltage_V": 3.45},
+  {"x": 0.50, "voltage_V": 3.45},
+  {"x": 0.55, "voltage_V": 3.46},
+  {"x": 0.60, "voltage_V": 3.45},
+  {"x": 0.65, "voltage_V": 3.44},
+  {"x": 0.70, "voltage_V": 3.45},
+  {"x": 0.75, "voltage_V": 3.45},
+  {"x": 0.80, "voltage_V": 3.44},
+  {"x": 0.85, "voltage_V": 3.35},
+  {"x": 0.90, "voltage_V": 3.10},
+  {"x": 0.95, "voltage_V": 2.80},
+  {"x": 1.00, "voltage_V": 2.50}
+]

@@ -120,6 +120,37 @@ def _validate_object_id(oid: str, entity_type: str = "object") -> str | None:
     return None
 
 
+_CHEMSYS_RE = re.compile(r"^[A-Z][a-z]?(-[A-Z][a-z]?)*$")
+
+
+def _validate_chemsys(chemsys: str) -> str | None:
+    """Return an error message if chemsys is invalid, else None."""
+    if not chemsys or not _CHEMSYS_RE.match(chemsys):
+        return (
+            f"Invalid chemsys '{chemsys}'. "
+            "Expected format like 'Li-Fe-O' (dash-separated element symbols)."
+        )
+    return None
+
+
+def _validate_fields(fields: list[str], available: frozenset[str]) -> str | None:
+    """Return an error message listing unknown fields, or None if all valid."""
+    unknown = [f for f in fields if f not in available]
+    if unknown:
+        return f"Unknown field(s): {', '.join(sorted(unknown))}"
+    return None
+
+
+_SORT_DIR_VALUES = frozenset({"asc", "desc"})
+
+
+def _validate_sort_dir(sort_dir: str) -> str | None:
+    """Return an error message if sort_dir is invalid, else None."""
+    if sort_dir not in _SORT_DIR_VALUES:
+        return f"Invalid sort_dir '{sort_dir}'. Expected 'asc' or 'desc'."
+    return None
+
+
 def _validate_per_page(n: int) -> str | None:
     """Return error message if per_page is out of range, else None."""
     if n < 1:

@@ -16,11 +16,15 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+from mcp_materials._cache import InMemoryCache
 from mcp_materials._prereqs import (
     HAS_MP_API,
     HAS_MPCONTRIBS,
 )
 from mcp_materials.contribs_tools import register_contribs_tools
+from mcp_materials.mp_property_tools import register_mp_property_tools
+from mcp_materials.mp_provenance_tools import register_mp_provenance_tools
+from mcp_materials.mp_search_tools import register_mp_search_tools
 from mcp_materials.mp_tools import register_mp_tools
 from mcp_materials.resources import get_crystal_systems, get_periodic_table
 
@@ -33,6 +37,9 @@ REF_NAMESPACE: Final[str] = "cmi://ref"
 
 # Singleton holder
 _server_instance: FastMCP | None = None
+
+# Shared cache instance for all tool modules
+_shared_cache = InMemoryCache()
 
 
 # ============================================================================
@@ -126,6 +133,9 @@ def compose_server() -> FastMCP:
 
     # 1. Register Toolsets
     register_mp_tools(server)
+    register_mp_provenance_tools(server, cache=_shared_cache)
+    register_mp_search_tools(server, cache=_shared_cache)
+    register_mp_property_tools(server, cache=_shared_cache)
     register_contribs_tools(server)
 
     # 2. Bind Resources (using CMI namespace)

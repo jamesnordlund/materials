@@ -1,0 +1,14 @@
+{
+  "name": "materials-mcp",
+  "description": "MCP server bridging Claude with Materials Project and MPContribs APIs for thermodynamics, electronic structure, crystal structures, and community-contributed materials data.",
+  "version": "0.1.0",
+  "mcpServers": {
+    "materials-science": {
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "mcp-materials"],
+      "env": {
+        "MP_API_KEY": "${MP_API_KEY}"
+      }
+    }
+  }
+}

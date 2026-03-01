@@ -1,0 +1,47 @@
+[
+  {
+    "material_id": "mp-149",
+    "formula_pretty": "Si",
+    "energy_above_hull": 0.0,
+    "band_gap": 0.6119,
+    "density": 2.3296,
+    "volume": 40.8882,
+    "nsites": 2,
+    "symmetry": {
+      "crystal_system": "Cubic",
+      "number": 227
+    },
+    "is_stable": true,
+    "is_metal": false
+  },
+  {
+    "material_id": "mp-13",
+    "formula_pretty": "Fe",
+    "energy_above_hull": 0.0,
+    "band_gap": 0.0,
+    "density": 7.8741,
+    "volume": 11.5199,
+    "nsites": 1,
+    "symmetry": {
+      "crystal_system": "Cubic",
+      "number": 229
+    },
+    "is_stable": true,
+    "is_metal": true
+  },
+  {
+    "material_id": "mp-19717",
+    "formula_pretty": "LiFePO4",
+    "energy_above_hull": 0.0,
+    "band_gap": 3.7126,
+    "density": 3.4715,
+    "volume": 291.1554,
+    "nsites": 28,
+    "symmetry": {
+      "crystal_system": "Orthorhombic",
+      "number": 62
+    },
+    "is_stable": true,
+    "is_metal": false
+  }
+]

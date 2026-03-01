@@ -1,0 +1,62 @@
+[
+  {
+    "material_id": "mp-P1",
+    "energy_above_hull_eV": 0.01,
+    "band_gap_eV": 3.0,
+    "density_g_cm3": 5.2
+  },
+  {
+    "material_id": "mp-P2",
+    "energy_above_hull_eV": 0.005,
+    "band_gap_eV": 2.0,
+    "density_g_cm3": 3.8
+  },
+  {
+    "material_id": "mp-P3",
+    "energy_above_hull_eV": 0.03,
+    "band_gap_eV": 3.5,
+    "density_g_cm3": 4.1
+  },
+  {
+    "material_id": "mp-D1",
+    "energy_above_hull_eV": 0.1,
+    "band_gap_eV": 2.0,
+    "density_g_cm3": 6.0
+  },
+  {
+    "material_id": "mp-D2",
+    "energy_above_hull_eV": 0.2,
+    "band_gap_eV": 1.5,
+    "density_g_cm3": 7.1
+  },
+  {
+    "material_id": "mp-D3",
+    "energy_above_hull_eV": 0.05,
+    "band_gap_eV": 2.5,
+    "density_g_cm3": 4.5
+  },
+  {
+    "material_id": "mp-D4",
+    "energy_above_hull_eV": 0.15,
+    "band_gap_eV": 1.0,
+    "density_g_cm3": 8.0
+  },
+  {
+    "material_id": "mp-D5",
+    "energy_above_hull_eV": 0.08,
+    "band_gap_eV": 2.8,
+    "density_g_cm3": 5.5
+  },
+  {
+    "material_id": "mp-D6",
+    "energy_above_hull_eV": 0.04,
+    "band_gap_eV": 2.0,
+    "density_g_cm3": 3.9
+  },
+  {
+    "material_id": "mp-D7",
+    "energy_above_hull_eV": 0.12,
+    "band_gap_eV": 3.0,
+    "density_g_cm3": 6.3
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "material_id": "mp-149",
+  "task_ids": ["mp-149", "mp-940614", "mp-1096463"],
+  "last_updated": "2024-06-15T12:34:56",
+  "created_at": "2013-02-01T00:00:00",
+  "history": [
+    {
+      "name": "Materials Project",
+      "url": "https://materialsproject.org",
+      "description": {
+        "task_type": "GGA+U Static",
+        "calc_type": "GGA+U Static"
+      }
+    }
+  ],
+  "authors": [
+    {
+      "name": "Materials Project Team",
+      "email": "feedback@materialsproject.org"
+    }
+  ],
+  "remarks": ["Silicon standard reference structure"]
+}

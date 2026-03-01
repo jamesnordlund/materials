@@ -9,11 +9,11 @@ An MCP (Model Context Protocol) server that gives Claude direct access to the [M
 - **Materials Project**: A comprehensive database of computational materials properties including thermodynamics, electronic structure, and crystal structures
 - **MPContribs**: Community-contributed experimental and calculated materials data
 
-The server provides 18 specialized tools and 3 domain-specific prompts for high-throughput materials screening and design workflows.
+The server provides 23 specialized tools and 3 domain-specific prompts for high-throughput materials screening and design workflows.
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - A [Materials Project API key](https://materialsproject.org/api) (free registration required)
 
 ## Installation
@@ -81,6 +81,14 @@ pip install materials-mcp[contribs]
 
 If MPContribs is not installed, the corresponding tools will return a helpful error message with installation instructions.
 
+You can optionally set a dedicated MPContribs API key:
+
+```bash
+export MPCONTRIBS_API_KEY="your-contribs-key"
+```
+
+If `MPCONTRIBS_API_KEY` is not set, the server falls back to `MP_API_KEY` / `PMG_MAPI_KEY` for MPContribs authentication. All API keys are redacted from error messages and log output.
+
 ## Running the Server
 
 ### Standalone
@@ -118,9 +126,9 @@ server.run()
 
 ## Available Tools
 
-### Materials Project Tools (10 tools)
+### Materials Project Tools (15 tools)
 
-All return JSON-formatted results.
+All return JSON-formatted results. New tools (marked with **NEW**) include a `metadata.db_version` field for reproducibility.
 
 #### `search_materials(formula: str, max_results: int = 10)`
 Search the Materials Project database by chemical formula.
@@ -183,7 +191,7 @@ max_results: 20
 
 Returns stable and metastable phases in the system.
 
-#### `search_by_band_gap(min_gap: float = 0.0, max_gap: float = 5.0, max_results: int = 10)`
+#### `search_by_band_gap(min_gap: float = 0.0, max_gap: float = 10.0, max_results: int = 10)`
 Find materials with band gaps in a specified range.
 
 **Example:**
@@ -237,6 +245,81 @@ max_results: 10
 ```
 
 Returns materials ranked by bulk modulus.
+
+#### **NEW** `mp_get_database_version()`
+Return the current Materials Project database version. Useful for tracking which database release produced a given result.
+
+**Example:**
+```
+# No parameters required
+```
+
+Returns the database version string (e.g., `"2026.2.1"`).
+
+#### **NEW** `mp_provenance_get(material_id: str, fields: list[str] | None = None)`
+Get provenance metadata for a material, including task IDs, builder metadata, and creation timestamps.
+
+**Example:**
+```
+material_id: "mp-149"
+```
+
+Returns task IDs, last updated timestamp, creation date, and history.
+
+#### **NEW** `mp_tasks_get(material_id: str, fields: list[str] | None = None)`
+Get task-level provenance data for a material: calculation IDs, input parameters, and task types.
+
+**Example:**
+```
+material_id: "mp-149"
+```
+
+Returns individual DFT calculation records associated with the material.
+
+#### **NEW** `mp_summary_search_advanced(...)`
+Advanced search across the Materials Project summary endpoint with multi-field filtering.
+
+**Parameters:**
+- `must_include_elements`: Elements that must be present (e.g., `["Li", "Fe", "O"]`)
+- `must_exclude_elements`: Elements to exclude
+- `formula`: Chemical formula filter
+- `chemsys`: Chemical system (e.g., `"Li-Fe-O"`)
+- `band_gap_min` / `band_gap_max`: Band gap range in eV
+- `energy_above_hull_max`: Maximum energy above hull in eV/atom
+- `is_stable`: Filter for stable materials only
+- `is_metal`: Filter for metals or non-metals
+- `fields`: List of fields to return (validated against available fields)
+- `sort_by` / `sort_dir`: Sorting options
+- `max_results`: Maximum results (1-100, default: 50)
+
+**Example:**
+```
+must_include_elements: ["Li", "Fe", "O"]
+energy_above_hull_max: 0.05
+fields: ["material_id", "formula_pretty", "energy_above_hull", "band_gap"]
+max_results: 50
+```
+
+#### **NEW** `mp_insertion_electrodes_search(working_ion: str | None = None, material_id: str | None = None, chemsys: str | None = None, fields: list[str] | None = None, max_results: int = 20)`
+Search for insertion electrode documents from the Materials Project.
+
+**Parameters:**
+- `working_ion`: Working ion element (e.g., `"Li"`, `"Na"`, `"Mg"`)
+- `material_id`: Filter by specific material ID
+- `chemsys`: Chemical system (e.g., `"Li-Mn-O"`)
+- `fields`: Optional fields to return
+- `max_results`: Maximum results (1-100, default: 20)
+
+At least one of `working_ion`, `material_id`, or `chemsys` must be provided.
+
+**Example:**
+```
+working_ion: "Li"
+chemsys: "Li-Mn-O"
+max_results: 10
+```
+
+Returns electrode documents with voltage data, capacity, and framework information.
 
 ### MPContribs Tools (8 tools)
 
@@ -343,19 +426,33 @@ Uses `contribs_search_projects()` and `contribs_get_contribution()` to access co
 
 ## Output Format
 
-All tools return JSON-formatted results for structured parsing:
+All tools return JSON-formatted results for structured parsing. New tools use a standardized envelope:
 
 ```json
 {
-  "material_id": "mp-149",
-  "formula": "Si",
-  "band_gap_eV": 1.12,
-  "formation_energy_eV_atom": 0.0,
-  "crystal_system": "cubic",
-  "space_group_symbol": "Fd-3m",
-  "is_stable": true
+  "metadata": {
+    "db_version": "2026.2.1",
+    "tool_name": "mp_summary_search_advanced",
+    "query_time_ms": 1250
+  },
+  "query": {
+    "must_include_elements": ["Li", "Fe", "O"],
+    "max_results": 50
+  },
+  "count": 42,
+  "records": [
+    {
+      "material_id": "mp-19017",
+      "formula_pretty": "LiFePO4",
+      "energy_above_hull_eV": 0.0,
+      "band_gap_eV": 3.7
+    }
+  ],
+  "errors": []
 }
 ```
+
+Numeric properties use unit-suffixed key names (e.g., `energy_above_hull_eV`, `density_g_cm3`, `avg_voltage_V`). NaN and Infinity values are replaced with `null`.
 
 Errors include helpful diagnostic information:
 
@@ -432,8 +529,11 @@ curl -X GET "https://api.materialsproject.org/materials/summary/mp-149" \
 
 ## Performance Considerations
 
-- **API Calls**: Each tool call makes a request to Materials Project or MPContribs APIs. Requests have a 60-second timeout.
-- **Result Limits**: Use the `max_results` parameter to limit data transfer. The default is 10-20 results.
+- **Caching**: The server maintains an in-memory LRU cache (256 entries, 1-hour TTL by default) keyed by tool name, arguments, and database version. Repeated identical queries are served from cache. Configure via environment variables:
+  - `MCP_CACHE_MAX_ENTRIES` (default: 256)
+  - `MCP_CACHE_TTL_SECONDS` (default: 3600)
+- **API Calls**: Each cache miss makes a request to Materials Project or MPContribs APIs. Requests have a 60-second timeout.
+- **Result Limits**: Use the `max_results` parameter to limit data transfer. The default is 10-50 results depending on the tool.
 - **Phase Diagrams**: Computing phase diagrams for systems with many elements can take several seconds.
 - **Rate Limiting**: Materials Project and MPContribs have rate limits. The server respects these with polite request spacing.
 
@@ -449,6 +549,7 @@ This package is part of the [materials toolkit](https://github.com/jamesnordlund
 
 ## Related Packages
 
+- **[materials-data-workflows](../materials-data-workflows/)**: Agent skills for data-to-decision workflows (Pareto screening, electrode metrics, provenance reporting)
 - **[materials-simulation-skills](../materials-simulation-skills/)**: Agent skills for numerical simulation workflows (solvers, meshing, time-stepping, optimization, validation)
 - **[Materials Project](https://materialsproject.org/)**: The underlying database and API
 - **[pymatgen](https://pymatgen.org/)**: Materials structure analysis toolkit

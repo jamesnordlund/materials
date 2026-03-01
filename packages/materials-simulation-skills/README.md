@@ -27,6 +27,8 @@ when the skill triggers. Scripts are executed directly for reliability.
 | `time-stepping` | Time step planning, output scheduling, checkpointing |
 | `differentiation-schemes` | Scheme selection, stencil generation, truncation error |
 | `mesh-generation` | Grid sizing, mesh quality metrics |
+| `multiphase-field` | Multi-physics phase-field example combining stability, integration, and solver skills |
+| `multiphase-field-imex` | IMEX splitting for stiff/non-stiff coupling in multiphase-field problems |
 
 ### Simulation Workflow Skills (`skills/simulation-workflow/`)
 | Skill | Description |
@@ -40,7 +42,7 @@ when the skill triggers. Scripts are executed directly for reliability.
 ### Additional Resources
 - Examples for each skill in `examples/`
 - Comprehensive unit and integration tests in `tests/`
-- CI/CD pipeline for cross-platform testing (Python 3.10-3.12)
+- CI/CD pipeline for cross-platform testing (Python 3.11-3.12)
 
 ## Using the skills
 1. Mention the skill by name in your request, or ask a task that matches its
@@ -62,7 +64,8 @@ supports `SKILL.md`-based skills.
 ## Quick start
 Run the full test suite:
 ```bash
-python3 -m unittest discover -s tests
+pytest tests/unit -v --tb=short
+pytest tests/integration -v --tb=short
 ```
 
 Browse and run examples:
@@ -74,7 +77,8 @@ cat examples/README.md
 ```
 skills/              # Skill packages (SKILL.md, scripts, references)
 examples/            # Runnable CLI examples
-tests/               # Unit + integration tests
+tests/unit/          # Unit tests
+tests/integration/   # Integration tests
 ```
 
 ## Acknowledgements

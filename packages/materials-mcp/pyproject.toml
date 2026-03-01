@@ -5,13 +5,12 @@ description = "Computational Materials Interface (CMI) - High-throughput materia
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "James Nordlund" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["mcp", "materials-science", "materials-project", "mpcontribs", "api", "claude"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -23,7 +22,7 @@ dependencies = [
     "mcp>=1.9.0,<2",
     "mp-api>=0.45.0",
     "pandas>=2.0.0",
-    "pymatgen>=2024.1.0",
+    "pymatgen>=2024.2.20",
 ]
 
 [project.optional-dependencies]

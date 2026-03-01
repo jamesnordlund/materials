@@ -1,0 +1,10 @@
+{
+  "name": "materials-data-workflows",
+  "description": "Agent skills for materials science data-to-decision workflows: screening, electrode metrics, provenance reporting, and more.",
+  "version": "0.1.0",
+  "skills": [
+    "./skills/data-to-decision/mp-pareto-screening",
+    "./skills/data-to-decision/insertion-electrode-metrics",
+    "./skills/data-to-decision/mp-provenance-reporter"
+  ]
+}

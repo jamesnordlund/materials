@@ -111,7 +111,10 @@ def _check_contribs_prerequisites() -> tuple[str | None, str | None]:
             ),
             None,
         )
-    has_key, key_or_error = check_api_key()
-    if not has_key:
-        return _error_response(key_or_error), None
-    return None, key_or_error
+    key = os.environ.get("MPCONTRIBS_API_KEY") or get_mp_api_key()
+    if not key:
+        return _error_response(
+            "MPCONTRIBS_API_KEY (or MP_API_KEY / PMG_MAPI_KEY) environment variable not set. "
+            "Get your key at https://materialsproject.org/api"
+        ), None
+    return None, key

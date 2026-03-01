@@ -35,7 +35,7 @@ def sanitize_message(message: str) -> str:
         [REDACTED].
     """
     # Redact environment variable API keys
-    key_vars = ("MP_API_KEY", "PMG_MAPI_KEY")
+    key_vars = ("MP_API_KEY", "PMG_MAPI_KEY", "MPCONTRIBS_API_KEY")
     for var in key_vars:
         value = os.environ.get(var, "")
         if len(value) >= 4:

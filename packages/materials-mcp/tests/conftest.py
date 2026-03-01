@@ -1,9 +1,107 @@
 """Pytest configuration for mcp_materials tests."""
 
+import json
+import os
+import re
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
+# ============================================================================
+# Record / Replay test harness  (TASK-010, traces: R-TEST-001, R-TEST-005)
+# ============================================================================
+
+RECORD_MODE: bool = os.environ.get("MCP_TEST_RECORD", "0") == "1"
+
+_FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+# Patterns used by _check_api_key_leak to satisfy R-TEST-005 / R-SEC-015.
+# 1. Known environment variable *values* that should never appear in fixtures.
+_KEY_NAME_PATTERNS: list[str] = [
+    "MP_API_KEY",
+    "PMG_MAPI_KEY",
+    "MPCONTRIBS_API_KEY",
+]
+# 2. Generic pattern: 32+ contiguous alphanumeric chars that look like an API
+#    key or bearer token.  UUIDs (with hyphens) are excluded intentionally.
+_GENERIC_KEY_RE = re.compile(r"[A-Za-z0-9]{32,}")
+
+# Substrings that are expected to legitimately match the generic regex
+# (e.g. POTCAR MD5 hashes in task fixture data).  Extend as needed.
+_ALLOWLISTED_LONG_STRINGS: set[str] = {
+    "b2b0ea6feb62e7cde209616b0b17e78a",  # Si POTCAR hash in tasks_mp149.json
+}
+
+
+def _check_api_key_leak(raw_text: str, source_path: str) -> None:
+    """Raise ``AssertionError`` if *raw_text* contains an API key pattern.
+
+    Checked patterns:
+    * Literal occurrences of known key-name strings used as *values*
+      (``MP_API_KEY``, ``PMG_MAPI_KEY``, ``MPCONTRIBS_API_KEY``).
+    * Any 32+ character alphanumeric token that resembles an API key.
+
+    Parameters
+    ----------
+    raw_text:
+        The full text content of a fixture file.
+    source_path:
+        Human-readable path used only in the error message.
+    """
+    for key_name in _KEY_NAME_PATTERNS:
+        if key_name in raw_text:
+            raise AssertionError(
+                f"Fixture {source_path} contains forbidden key pattern "
+                f"'{key_name}'.  Remove or redact the value before committing."
+            )
+
+    for match in _GENERIC_KEY_RE.finditer(raw_text):
+        token = match.group()
+        if token not in _ALLOWLISTED_LONG_STRINGS:
+            raise AssertionError(
+                f"Fixture {source_path} contains a suspected API key or "
+                f"token ({token[:12]}..., length {len(token)}).  If this is "
+                f"a false positive, add it to _ALLOWLISTED_LONG_STRINGS in "
+                f"conftest.py."
+            )
+
+
+def _load_fixture(fixture_dir: Path, fixture_name: str) -> dict:
+    """Load a JSON fixture from *fixture_dir* and run the leak check.
+
+    In **replay mode** (default) the fixture is read from disk.
+    In **record mode** (``MCP_TEST_RECORD=1``) the behaviour is identical
+    for now -- live recording will be wired in a future task.
+
+    Returns the parsed JSON object.
+    """
+    fixture_path = fixture_dir / f"{fixture_name}.json"
+    if not fixture_path.exists():
+        raise FileNotFoundError(
+            f"Fixture file not found: {fixture_path}.  "
+            f"Run with MCP_TEST_RECORD=1 to create it (once recording is wired)."
+        )
+    raw = fixture_path.read_text(encoding="utf-8")
+    _check_api_key_leak(raw, str(fixture_path))
+    return json.loads(raw)
+
+
+def mp_fixture(fixture_name: str) -> dict:
+    """Load a Materials Project fixture by name.
+
+    Looks for ``tests/fixtures/mp/{fixture_name}.json``.
+    """
+    return _load_fixture(_FIXTURES_DIR / "mp", fixture_name)
+
+
+def contribs_fixture(fixture_name: str) -> dict:
+    """Load an MPContribs fixture by name.
+
+    Looks for ``tests/fixtures/contribs/{fixture_name}.json``.
+    """
+    return _load_fixture(_FIXTURES_DIR / "contribs", fixture_name)
 
 
 @pytest.fixture(autouse=True)

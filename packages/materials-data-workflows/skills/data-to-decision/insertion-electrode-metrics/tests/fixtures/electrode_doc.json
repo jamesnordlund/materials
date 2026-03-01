@@ -1,0 +1,10 @@
+{
+  "material_id": "mp-19017",
+  "working_ion": "Li",
+  "average_voltage": 3.45,
+  "capacity_grav": 170.0,
+  "capacity_vol": 590.0,
+  "stability_charge": 0.0,
+  "stability_discharge": 0.032,
+  "max_delta_volume": 6.5
+}

@@ -137,7 +137,7 @@ class TestServerToolRegistration(unittest.TestCase):
     """Verify all expected tools are registered on the FastMCP instance."""
 
     def test_total_tool_count(self):
-        """18 tools expected: 10 MP + 8 Contribs."""
+        """23 tools expected: 10 MP + 3 Provenance + 1 Search + 1 Property + 8 Contribs."""
         from mcp_materials.server import get_shared_server
         server = get_shared_server()
 
@@ -145,7 +145,7 @@ class TestServerToolRegistration(unittest.TestCase):
         # There is no public API to enumerate registered tools as of FastMCP 0.x.
         # If FastMCP changes its internal layout, this test will need updating.
         tool_count = len(server._tool_manager._tools)
-        self.assertEqual(tool_count, 18)
+        self.assertEqual(tool_count, 23)
 
     def test_cmi_resources_registered(self):
         """Verify resources use the new CMI namespace."""

@@ -163,6 +163,31 @@ class TestSanitizeMessage(unittest.TestCase):
         self.assertNotIn("abc123", result)
         self.assertNotIn("def456", result)
 
+    def test_mpcontribs_api_key_redacted(self):
+        """MPCONTRIBS_API_KEY env var value is replaced with [REDACTED]."""
+        with patch.dict(os.environ, {"MPCONTRIBS_API_KEY": "contribs_secret_9876"}):
+            result = sanitize_message(
+                "Error connecting with key contribs_secret_9876 to MPContribs"
+            )
+            self.assertNotIn("contribs_secret_9876", result)
+            self.assertIn("[REDACTED]", result)
+
+    def test_mpcontribs_api_key_with_other_keys(self):
+        """MPCONTRIBS_API_KEY is redacted alongside MP_API_KEY and PMG_MAPI_KEY."""
+        with patch.dict(os.environ, {
+            "MP_API_KEY": "mp_key_aaaa1111",
+            "PMG_MAPI_KEY": "pmg_key_bbbb2222",
+            "MPCONTRIBS_API_KEY": "contribs_key_cccc3333",
+        }):
+            msg = (
+                "Keys: mp_key_aaaa1111, pmg_key_bbbb2222, contribs_key_cccc3333"
+            )
+            result = sanitize_message(msg)
+            self.assertNotIn("mp_key_aaaa1111", result)
+            self.assertNotIn("pmg_key_bbbb2222", result)
+            self.assertNotIn("contribs_key_cccc3333", result)
+            self.assertEqual(result.count("[REDACTED]"), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

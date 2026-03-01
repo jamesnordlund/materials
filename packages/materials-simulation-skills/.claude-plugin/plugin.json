@@ -1,0 +1,21 @@
+{
+  "name": "materials-simulation-skills",
+  "description": "Agent skills for numerical simulation workflows including stability analysis, integration, solvers, meshing, and simulation orchestration.",
+  "version": "0.1.0",
+  "skills": [
+    "./skills/core-numerical/numerical-stability",
+    "./skills/core-numerical/numerical-integration",
+    "./skills/core-numerical/linear-solvers",
+    "./skills/core-numerical/nonlinear-solvers",
+    "./skills/core-numerical/time-stepping",
+    "./skills/core-numerical/differentiation-schemes",
+    "./skills/core-numerical/mesh-generation",
+    "./skills/core-numerical/multiphase-field",
+    "./skills/core-numerical/multiphase-field-imex",
+    "./skills/simulation-workflow/simulation-validator",
+    "./skills/simulation-workflow/parameter-optimization",
+    "./skills/simulation-workflow/simulation-orchestrator",
+    "./skills/simulation-workflow/post-processing",
+    "./skills/simulation-workflow/performance-profiling"
+  ]
+}
